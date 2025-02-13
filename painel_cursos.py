@@ -133,15 +133,16 @@ if uploaded_file:
             fig, ax = plt.subplots(figsize=(largura_grafico, altura_grafico))
             if tipo_grafico == "Barras":
                 sns.barplot(x=contagem.index, y=contagem.values, hue=contagem.index, palette=paleta, legend=False, ax=ax)
-                # Adicionar tooltip ao gráfico de barras
-                for bar in ax.patches:
+                for bar, label in zip(ax.patches, contagem.index):
                     ax.annotate(f'{bar.get_height()}', (bar.get_x() + bar.get_width() / 2, bar.get_height()),
                                 ha='center', va='center', size=10, xytext=(0, 8), textcoords='offset points')
+                ax.set_xlabel("")
+                ax.set_ylabel("Quantidade")
+                ax.set_title(coluna, fontsize=10, fontweight='bold')
             elif tipo_grafico == "Pizza":
                 ax.pie(contagem.values, labels=contagem.index, colors=[paleta[x] for x in contagem.index], autopct='%1.1f%%', startangle=140)
             elif tipo_grafico == "Linha":
                 ax.plot(contagem.index, contagem.values, marker='o', color='#1E88E5')
-            ax.set_title(coluna, fontsize=10, fontweight='bold')
             st.pyplot(fig, use_container_width=True)
 
             # Criar um arquivo temporário para a imagem
