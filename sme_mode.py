@@ -55,6 +55,11 @@ def run_sme_mode():
         "Não tinha muito interesse mas dei uma oportunidade ao tema": "#90CAF9"  # Azul claro
     }
 
+    # Função para quebrar rótulos longos com espaços
+    def quebrar_rotulos(label, comprimento=20):
+        import textwrap
+        return '\n'.join(textwrap.wrap(label, width=comprimento, break_long_words=False, break_on_hyphens=False))
+
     # Upload do arquivo
     uploaded_file = st.file_uploader("📂 Envie o arquivo da planilha de respostas", type=["xlsx"])
 
@@ -122,7 +127,7 @@ def run_sme_mode():
                 # Sliders individuais para tamanho dos gráficos
                 largura_grafico = st.slider(f"📏 Largura do gráfico ({coluna})", min_value=3, max_value=12, value=6)
                 altura_grafico = st.slider(f"📐 Altura do gráfico ({coluna})", min_value=2, max_value=10, value=4)
-                
+
                 # Aplicação das cores fixas
                 contagem = df[coluna].value_counts()
                 paleta = {x: cores_fixas.get(x, "#999999") for x in contagem.index}
@@ -131,6 +136,8 @@ def run_sme_mode():
                 fig, ax = plt.subplots(figsize=(largura_grafico, altura_grafico))
                 if tipo_grafico == "Barras":
                     sns.barplot(x=contagem.index, y=contagem.values, hue=contagem.index, palette=paleta, legend=False, ax=ax)
+                    ax.set_xticks(range(len(contagem.index)))
+                    ax.set_xticklabels([quebrar_rotulos(label) for label in contagem.index])
                     for bar, label in zip(ax.patches, contagem.index):
                         ax.annotate(f'{bar.get_height()}', (bar.get_x() + bar.get_width() / 2, bar.get_height()),
                                     ha='center', va='center', size=10, xytext=(0, 8), textcoords='offset points')
@@ -138,7 +145,7 @@ def run_sme_mode():
                     ax.set_ylabel("Quantidade")
                     ax.set_title(coluna, fontsize=10, fontweight='bold')
                 elif tipo_grafico == "Pizza":
-                    ax.pie(contagem.values, labels=contagem.index, colors=[paleta[x] for x in contagem.index], autopct='%1.1f%%', startangle=140)
+                    ax.pie(contagem.values, labels=[quebrar_rotulos(x) for x in contagem.index], colors=[paleta[x] for x in contagem.index], autopct='%1.1f%%', startangle=140)
                 elif tipo_grafico == "Linha":
                     ax.plot(contagem.index, contagem.values, marker='o', color='#1E88E5')
                 st.pyplot(fig, use_container_width=True)
