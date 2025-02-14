@@ -35,6 +35,11 @@ def run_sme_mode():
         </style>
     """, unsafe_allow_html=True)
 
+    # Estilização de rótulos longos com quebras entre palavras
+    def quebrar_rotulos(label, comprimento=20):
+        import textwrap
+        return '\n'.join(textwrap.wrap(label, width=comprimento, break_long_words=False, break_on_hyphens=False))
+
     # Dicionário de cores fixas para opções de resposta
     cores_fixas = {
         "Concordo plenamente": "#2E7D32",  # Verde escuro
@@ -54,11 +59,6 @@ def run_sme_mode():
         "Interesse nas horas para ampliação / Foi o que consegui me inscrever": "#42A5F5",  # Azul médio
         "Não tinha muito interesse mas dei uma oportunidade ao tema": "#90CAF9"  # Azul claro
     }
-
-    # Função para quebrar rótulos longos com espaços
-    def quebrar_rotulos(label, comprimento=20):
-        import textwrap
-        return '\n'.join(textwrap.wrap(label, width=comprimento, break_long_words=False, break_on_hyphens=False))
 
     # Upload do arquivo
     uploaded_file = st.file_uploader("📂 Envie o arquivo da planilha de respostas", type=["xlsx"])
@@ -91,8 +91,15 @@ def run_sme_mode():
 
         # Barra lateral para filtros
         st.sidebar.header("🎓 Filtros")
-        cursos = df['curso'].unique()
-        curso_selecionado = st.sidebar.selectbox("📌 Selecione o Curso", cursos)
+
+        modo_visualizacao = st.sidebar.radio("🔍 Selecione o modo de visualização", ["Geral", "Por Curso"])
+
+        if modo_visualizacao == "Por Curso":
+            cursos = df['curso'].unique()
+            curso_selecionado = st.sidebar.selectbox("📌 Selecione o Curso", cursos)
+            df_filtrado = df[df['curso'] == curso_selecionado]
+        else:
+            df_filtrado = df
 
         # Botão para recarregar dados
         if st.sidebar.button("🔄 Recarregar Dados"):
@@ -102,7 +109,7 @@ def run_sme_mode():
         st.sidebar.header("📊 Estatísticas Gerais")
         numeric_columns = df.select_dtypes(include=['number'])
         if not numeric_columns.empty:
-            st.sidebar.write("Número total de respostas:", len(df))
+            st.sidebar.write("Número total de respostas:", len(df_filtrado))
             st.sidebar.write("Média das respostas (numéricas):", numeric_columns.describe().mean())
         else:
             st.sidebar.write("Não há colunas numéricas para análise estatística.")
@@ -116,7 +123,7 @@ def run_sme_mode():
 
         # Criar um documento Word
         doc = Document()
-        doc.add_heading(f"Relatório de Avaliação - {curso_selecionado}", level=1)
+        doc.add_heading(f"Relatório de Avaliação", level=1)
 
         arquivos_temp = []
 
@@ -129,21 +136,20 @@ def run_sme_mode():
                 altura_grafico = st.slider(f"📐 Altura do gráfico ({coluna})", min_value=2, max_value=10, value=4)
 
                 # Aplicação das cores fixas
-                contagem = df[coluna].value_counts()
+                contagem = df_filtrado[coluna].value_counts()
                 paleta = {x: cores_fixas.get(x, "#999999") for x in contagem.index}
 
                 # Gerar gráfico com base no tipo selecionado
                 fig, ax = plt.subplots(figsize=(largura_grafico, altura_grafico))
                 if tipo_grafico == "Barras":
                     sns.barplot(x=contagem.index, y=contagem.values, hue=contagem.index, palette=paleta, legend=False, ax=ax)
-                    ax.set_xticks(range(len(contagem.index)))
-                    ax.set_xticklabels([quebrar_rotulos(label) for label in contagem.index])
                     for bar, label in zip(ax.patches, contagem.index):
                         ax.annotate(f'{bar.get_height()}', (bar.get_x() + bar.get_width() / 2, bar.get_height()),
                                     ha='center', va='center', size=10, xytext=(0, 8), textcoords='offset points')
                     ax.set_xlabel("")
                     ax.set_ylabel("Quantidade")
                     ax.set_title(coluna, fontsize=10, fontweight='bold')
+                    ax.set_xticklabels([quebrar_rotulos(label.get_text()) for label in ax.get_xticklabels()])
                 elif tipo_grafico == "Pizza":
                     ax.pie(contagem.values, labels=[quebrar_rotulos(x) for x in contagem.index], colors=[paleta[x] for x in contagem.index], autopct='%1.1f%%', startangle=140)
                 elif tipo_grafico == "Linha":
@@ -175,12 +181,11 @@ def run_sme_mode():
         doc.save(doc_buffer)
         doc_buffer.seek(0)
         st.sidebar.markdown("### 📥 Baixar Relatório")
-        st.sidebar.download_button("📥 Baixar relatório em Word", data=doc_buffer.getvalue(), file_name=f"Relatorio_{curso_selecionado}.docx", mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document", help="Clique para baixar o relatório gerado.", key="download_word", use_container_width=True)
+        st.sidebar.download_button("📥 Baixar relatório em Word", data=doc_buffer.getvalue(), file_name=f"Relatorio.docx", mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document", help="Clique para baixar o relatório gerado.", key="download_word", use_container_width=True)
 
         # Botão para exportar os dados filtrados para Excel
         st.sidebar.markdown("### 📤 Exportar Dados")
         excel_buffer = io.BytesIO()
-        df_filtrado = df[df['curso'] == curso_selecionado]
         with pd.ExcelWriter(excel_buffer, engine='openpyxl') as writer:
             df_filtrado.to_excel(writer, index=False, sheet_name="Avaliações")
         excel_buffer.seek(0)
