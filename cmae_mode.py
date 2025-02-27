@@ -3,23 +3,51 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import io
 import os
+import datetime
 from docx import Document
 
+def calcular_idade(data_nascimento, data_avaliacao):
+    """Calcula a idade do aluno na data da avaliação."""
+    if pd.isnull(data_nascimento) or pd.isnull(data_avaliacao):
+        return None, None
+    
+    data_nascimento = pd.to_datetime(data_nascimento, errors="coerce")
+    data_avaliacao = pd.to_datetime(data_avaliacao, errors="coerce")
+
+    if pd.isnull(data_nascimento) or pd.isnull(data_avaliacao):
+        return None, None
+
+    idade_anos = data_avaliacao.year - data_nascimento.year
+    idade_meses = data_avaliacao.month - data_nascimento.month
+
+    if data_avaliacao.day < data_nascimento.day:
+        idade_meses -= 1
+
+    if idade_meses < 0:
+        idade_anos -= 1
+        idade_meses += 12
+
+    return idade_anos, idade_meses
+
 def carregar_dados(uploaded_file):
-    """ Carrega os dados do arquivo e faz ajustes necessários. """
+    """Carrega os dados do arquivo e calcula a idade do aluno."""
     df = pd.read_excel(uploaded_file, engine="openpyxl")
     df.columns = df.columns.str.strip()
 
     # Renomear colunas para facilitar manipulação
     df.rename(columns={
         "Unidade escolar de origem do encaminhamento": "Unidade",
-        "Idade da criança no dia da avaliação (em anos e meses):": "Idade",
-        "Nome completo do aluno:": "Aluno"
+        "Nome completo do aluno:": "Aluno",
+        "Data da avaliação:": "Data_Avaliacao",
+        "Data de Nascimento:": "Data_Nascimento"
     }, inplace=True, errors="ignore")
 
-    # Extrair anos e meses da idade (formato esperado: 'X anos e Y meses')
-    df["Ano"] = df["Idade"].str.extract(r"(\d+)").astype(float)  # Pega apenas os anos
-    df["Meses"] = df["Idade"].str.extract(r"(\d+) meses").astype(float).fillna(0)  # Pega apenas os meses
+    # Converter datas para datetime
+    df["Data_Nascimento"] = pd.to_datetime(df["Data_Nascimento"], errors="coerce")
+    df["Data_Avaliacao"] = pd.to_datetime(df["Data_Avaliacao"], errors="coerce")
+
+    # Calcular idade exata do aluno na data da avaliação
+    df["Ano"], df["Meses"] = zip(*df.apply(lambda row: calcular_idade(row["Data_Nascimento"], row["Data_Avaliacao"]), axis=1))
 
     return df
 
@@ -36,7 +64,7 @@ def run_cmae_mode():
     df = carregar_dados(uploaded_file)
     
     # 🔹 Verifica se as colunas esperadas estão presentes
-    colunas_esperadas = ["Unidade", "Idade", "Aluno", "Ano", "Meses"]
+    colunas_esperadas = ["Unidade", "Aluno", "Ano", "Meses"]
     for col in colunas_esperadas:
         if col not in df.columns:
             st.error(f"🚨 A coluna '{col}' não foi encontrada no arquivo. Verifique o formato.")
@@ -47,17 +75,6 @@ def run_cmae_mode():
     idade_anos_max = int(df["Ano"].max()) if not df["Ano"].isnull().all() else 10
     idade_meses_min = int(df["Meses"].min()) if not df["Meses"].isnull().all() else 0
     idade_meses_max = int(df["Meses"].max()) if not df["Meses"].isnull().all() else 11
-
- # 🔹 Definir cores fixas para respostas
-    cores_fixas = {
-        "Sim": "#2E7D32",
-        "Não": "#D32F2F",
-        "Às vezes": "#FFEB3B",
-        "Nunca": "#D32F2F",
-        "Sempre": "#2E7D32",
-        "Frequentemente": "#66BB6A",
-        "Ocasionalmente": "#FFEB3B"
-    }
 
     # 🔹 Filtros na barra lateral
     st.sidebar.header("🎯 **Filtros**")
@@ -79,27 +96,39 @@ def run_cmae_mode():
     categorias = ["Socialização", "Linguagem", "Cognição", "Auto cuidado", "Desenvolvimento Motor"]
     categoria_selecionada = st.sidebar.selectbox("🧩 **Categoria**", categorias)
 
-    # 📌 Filtro de aluno individual
-    alunos_filtrados = df["Aluno"][
-        (df["Ano"] > idade_ano_min) | ((df["Ano"] == idade_ano_min) & (df["Meses"] >= idade_mes_min)) &
-        (df["Ano"] < idade_ano_max) | ((df["Ano"] == idade_ano_max) & (df["Meses"] <= idade_mes_max))
-    ]
-    aluno_selecionado = st.sidebar.selectbox("👦 **Selecionar Aluno**", ["Todos"] + sorted(alunos_filtrados.unique().tolist()))
+    # 📌 Campo de pesquisa com autocomplete (Usando selectbox com opção de digitação)
+    aluno_lista = df["Aluno"].dropna().unique().tolist()
+    aluno_lista.insert(0, "Todos")  # Adiciona opção para exibir todos os alunos
 
-    # 📈 Escolha do tipo de gráfico
-    tipo_grafico = st.sidebar.selectbox("📊 **Tipo de Gráfico**", ["Barras", "Pizza", "Linha"])
+    aluno_selecionado = st.sidebar.selectbox("👦 **Pesquise um aluno**", aluno_lista)
 
     # 🔄 Botão para recarregar
     if st.sidebar.button("🔄 **Atualizar Dados**"):
         st.rerun()
 
+    # 🔹 Filtrando os dados
+    df_filtrado = df[
+        ((df["Ano"] > idade_ano_min) | ((df["Ano"] == idade_ano_min) & (df["Meses"] >= idade_mes_min))) &
+        ((df["Ano"] < idade_ano_max) | ((df["Ano"] == idade_ano_max) & (df["Meses"] <= idade_mes_max)))
+    ]
+    
+    if unidade_selecionada != "Todas":
+        df_filtrado = df_filtrado[df_filtrado["Unidade"] == unidade_selecionada]
+
+    if aluno_selecionado != "Todos":
+        df_filtrado = df_filtrado[df_filtrado["Aluno"] == aluno_selecionado]
+
+    if aluno_selecionado != "Todos":
+        st.write(f"### 📄 Informações do Aluno: {aluno_selecionado}")
+        st.write(df_filtrado)
+
     # 📂 Criar os relatórios Word e Excel
     doc = Document()
-    doc.add_heading("📊 Relatório de Avaliação - CMAE", level=1)
+    doc.add_heading(f"📊 Relatório de Avaliação - {aluno_selecionado}", level=1)
     
     excel_buffer = io.BytesIO()
     with pd.ExcelWriter(excel_buffer, engine='openpyxl') as writer:
-        df.to_excel(writer, index=False, sheet_name="Avaliações")
+        df_filtrado.to_excel(writer, index=False, sheet_name="Avaliações")
     excel_buffer.seek(0)
 
     st.sidebar.markdown("### 📥 **Baixar Relatórios**")
@@ -121,39 +150,29 @@ def run_cmae_mode():
         file_name="Dados_Filtrados_CMAE.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     )
+    
+    # 🔹 Criando gráficos com cores fixas
+    cores_fixas = {
+        "Sim": "#2E7D32",
+        "Não": "#D32F2F",
+        "Parcialmente": "#FFEB3B",
+        "Não sei": "#999999"
+    }
 
-# 🔹 Criando gráficos
-    if categoria_selecionada:
-        for coluna in df.columns:
+    if categoria_selecionada and not df_filtrado.empty:
+        for coluna in df_filtrado.columns:
             if coluna.startswith(categoria_selecionada):
                 st.subheader(f"📊 {coluna}")
                 
-                largura_grafico = st.slider(f"📏 **Largura do gráfico ({coluna})**", min_value=3, max_value=12, value=6)
-                altura_grafico = st.slider(f"📐 **Altura do gráfico ({coluna})**", min_value=2, max_value=10, value=4)
+                contagem = df_filtrado[coluna].value_counts()
 
-                contagem = df[coluna].value_counts()
+                fig, ax = plt.subplots(figsize=(6, 4))
 
-                fig, ax = plt.subplots(figsize=(largura_grafico, altura_grafico))
-
-                if tipo_grafico == "Barras":
-                    cores = [cores_fixas.get(opcao, "#999999") for opcao in contagem.index]
+                if not contagem.empty:
+                    cores = [cores_fixas.get(resp, "#1E88E5") for resp in contagem.index]
                     ax.bar(contagem.index, contagem.values, color=cores)
+
                     for i, v in enumerate(contagem.values):
                         ax.text(i, v + 0.5, str(v), ha="center", fontsize=10)
 
-                elif tipo_grafico == "Pizza":
-                    cores = [cores_fixas.get(opcao, "#999999") for opcao in contagem.index]
-                    ax.pie(contagem.values, labels=contagem.index, colors=cores, autopct="%1.1f%%", startangle=140)
-
-                elif tipo_grafico == "Linha":
-                    ax.plot(contagem.index, contagem.values, marker="o", color="#1E88E5")
-
-                st.pyplot(fig)
-
-                # 📥 Download do gráfico
-                img_buffer = io.BytesIO()
-                fig.savefig(img_buffer, format="png", bbox_inches="tight")
-                img_buffer.seek(0)
-
-                st.download_button(f"📥 Baixar gráfico - {coluna}", data=img_buffer, file_name=f"{coluna}.png", mime="image/png")
-
+                    st.pyplot(fig)
