@@ -4,52 +4,13 @@ import matplotlib.pyplot as plt
 import io
 import os
 import datetime
+from utils import carregar_dados, calcular_status_aluno, calcular_idade
 from docx import Document
 
-def calcular_idade(data_nascimento, data_avaliacao):
-    """Calcula a idade do aluno na data da avaliação."""
-    if pd.isnull(data_nascimento) or pd.isnull(data_avaliacao):
-        return None, None
-    
-    data_nascimento = pd.to_datetime(data_nascimento, errors="coerce")
-    data_avaliacao = pd.to_datetime(data_avaliacao, errors="coerce")
+carregar_dados
+calcular_status_aluno
+calcular_idade
 
-    if pd.isnull(data_nascimento) or pd.isnull(data_avaliacao):
-        return None, None
-
-    idade_anos = data_avaliacao.year - data_nascimento.year
-    idade_meses = data_avaliacao.month - data_nascimento.month
-
-    if data_avaliacao.day < data_nascimento.day:
-        idade_meses -= 1
-
-    if idade_meses < 0:
-        idade_anos -= 1
-        idade_meses += 12
-
-    return idade_anos, idade_meses
-
-def carregar_dados(uploaded_file):
-    """Carrega os dados do arquivo e calcula a idade do aluno."""
-    df = pd.read_excel(uploaded_file, engine="openpyxl")
-    df.columns = df.columns.str.strip()
-
-    # Renomear colunas para facilitar manipulação
-    df.rename(columns={
-        "Unidade escolar de origem do encaminhamento": "Unidade",
-        "Nome completo do aluno:": "Aluno",
-        "Data da avaliação:": "Data_Avaliacao",
-        "Data de Nascimento:": "Data_Nascimento"
-    }, inplace=True, errors="ignore")
-
-    # Converter datas para datetime
-    df["Data_Nascimento"] = pd.to_datetime(df["Data_Nascimento"], errors="coerce")
-    df["Data_Avaliacao"] = pd.to_datetime(df["Data_Avaliacao"], errors="coerce")
-
-    # Calcular idade exata do aluno na data da avaliação
-    df["Ano"], df["Meses"] = zip(*df.apply(lambda row: calcular_idade(row["Data_Nascimento"], row["Data_Avaliacao"]), axis=1))
-
-    return df
 
 def run_cmae_mode():
     """ Executa a interface do Modo CMAE no Streamlit. """
@@ -102,41 +63,77 @@ def run_cmae_mode():
 
     aluno_selecionado = st.sidebar.selectbox("👦 **Pesquise um aluno**", aluno_lista)
 
-    # 🔄 Botão para recarregar
     if st.sidebar.button("🔄 **Atualizar Dados**"):
         st.rerun()
 
+    # Campo de entrada para pontuação esperada manual
+    pontuacao_manual = st.sidebar.number_input("✍️ **Pontuação Esperada Manual**", min_value= 5.0, step=0.1)
+
     # 🔹 Filtrando os dados
-    df_filtrado = df[
-        ((df["Ano"] > idade_ano_min) | ((df["Ano"] == idade_ano_min) & (df["Meses"] >= idade_mes_min))) &
-        ((df["Ano"] < idade_ano_max) | ((df["Ano"] == idade_ano_max) & (df["Meses"] <= idade_mes_max)))
-    ]
-    
+    df_filtrado = df.copy()
     if unidade_selecionada != "Todas":
         df_filtrado = df_filtrado[df_filtrado["Unidade"] == unidade_selecionada]
 
     if aluno_selecionado != "Todos":
         df_filtrado = df_filtrado[df_filtrado["Aluno"] == aluno_selecionado]
 
-    if aluno_selecionado != "Todos":
         st.write(f"### 📄 Informações do Aluno: {aluno_selecionado}")
         st.write(df_filtrado)
 
-    # 📂 Criar os relatórios Word e Excel
+        status_df = calcular_status_aluno(df_filtrado, categoria_selecionada, 12)
+        st.write("### 📊 Status Automático do Aluno na Categoria Selecionada")
+        st.write(status_df)
+
+        contagem_respostas = {
+            "Sim": sum(df_filtrado.filter(like=categoria_selecionada).apply(lambda x: (x == "Sim").sum())),
+            "Não": sum(df_filtrado.filter(like=categoria_selecionada).apply(lambda x: (x == "Não").sum())),
+            "Às vezes": sum(df_filtrado.filter(like=categoria_selecionada).apply(lambda x: (x == "Às vezes").sum()))
+        }
+
+        fig, ax = plt.subplots(figsize=(6, 4))
+        ax.bar(contagem_respostas.keys(), contagem_respostas.values(), color=["#2E7D32", "#D32F2F", "#FFEB3B"])
+        for i, v in enumerate(contagem_respostas.values()):
+            ax.text(i, v + 0.5, str(v), ha="center", fontsize=10)
+        st.pyplot(fig)
+
     doc = Document()
     doc.add_heading(f"📊 Relatório de Avaliação - {aluno_selecionado}", level=1)
+
+     # 🔹 Cálculo automático do status do aluno selecionado
+    if aluno_selecionado != "Todos":
+        df_aluno = df[df["Aluno"] == aluno_selecionado]
+        status_aluno = calcular_status_aluno(df_aluno, categoria_selecionada, meses_faixa_etaria=12)
+
+        st.write(f"### 📄 Informações do Aluno: {aluno_selecionado}")
+        st.write(df_aluno)
+
     
+    # 📊 Exibir status do aluno
+    status_aluno_atualizado = calcular_status_aluno(df_filtrado, categoria_selecionada, 12, pontuacao_esperada_manual=pontuacao_manual)
+
+    if status_aluno_atualizado is None:
+        st.warning("⚠️ Nenhuma informação disponível para esta categoria.")
+    else:
+        for _, row in status_aluno_atualizado.iterrows():
+            st.write(f"📌 **{row['Aluno']}**: {row['Status']} "
+                     f"(Obtido: {row['Pontuação Obtida']} / Esperado: {row['Pontuação Esperada']})")
+
+
+    # 📂 Criar relatórios
+    doc = Document()
+    doc.add_heading(f"📊 Relatório de Avaliação - {aluno_selecionado}", level=1)
+
     excel_buffer = io.BytesIO()
     with pd.ExcelWriter(excel_buffer, engine='openpyxl') as writer:
         df_filtrado.to_excel(writer, index=False, sheet_name="Avaliações")
     excel_buffer.seek(0)
 
     st.sidebar.markdown("### 📥 **Baixar Relatórios**")
-    
+
     doc_buffer = io.BytesIO()
     doc.save(doc_buffer)
     doc_buffer.seek(0)
-    
+
     st.sidebar.download_button(
         "📥 Baixar Relatório (Word)",
         data=doc_buffer.getvalue(),

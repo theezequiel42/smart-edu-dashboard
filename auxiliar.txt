@@ -5,3 +5,5 @@ python3 -m streamlit run main.py
 python -m streamlit run main.py
 
 python -m pip install -r requirements.txt
+
+git pull origin main
