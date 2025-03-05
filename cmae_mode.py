@@ -5,57 +5,66 @@ import io
 from utils import carregar_dados, calcular_idade
 from docx import Document
 
-# 🔹 Dicionário fixo de cores para status
+# 🔹 Cores fixas para os status
 CORES_FIXAS_STATUS = {
     "Sem atraso ✅": "#2E7D32",  
     "Alerta para atraso ⚠️": "#FFC107",  
     "Possível Déficit 🚨": "#D32F2F"
 }
 
+# 🔹 Lista de categorias conhecidas
+CATEGORIAS_VALIDAS = ["Socialização", "Linguagem", "Cognição", "Auto cuidado", "Desenvolvimento Motor"]
+
 def calcular_status_aluno(df, categoria, meses_faixa_etaria, pontuacao_esperada_manual=None):
-    """Calcula o status do aluno na categoria selecionada, usando idade_meses."""
+    """Calcula o status do aluno para uma ou várias categorias."""
+    
+    # 🔹 Garante que 'categoria' seja sempre uma lista
+    categorias = CATEGORIAS_VALIDAS if categoria == "Todas" else [categoria]
+    
     df_resultado = []
 
     for _, row in df.iterrows():
-        colunas_categoria = [col for col in df.columns if isinstance(col, str) and col.startswith(categoria)]
-        total_perguntas = len(colunas_categoria)
+        for categoria in categorias:
+            colunas_categoria = [col for col in df.columns if col.startswith(categoria)]
+            total_perguntas = len(colunas_categoria)
 
-        if total_perguntas == 0:
-            continue  
+            if total_perguntas == 0:
+                continue  
 
-        pontos_obtidos = sum([
-            1 if row[col] == "Sim" else 0.5 if row[col] == "Às vezes" else 0
-            for col in colunas_categoria
-        ])
+            pontos_obtidos = sum([
+                1 if row[col] == "Sim" else 0.5 if row[col] == "Às vezes" else 0
+                for col in colunas_categoria
+            ])
 
-        idade_meses = row["Meses"]
-        if pd.isna(idade_meses):
-            idade_meses = 0  
+            idade_meses = row["Meses"]
+            if pd.isna(idade_meses):
+                idade_meses = 0  
 
-        if pd.isna(meses_faixa_etaria) or meses_faixa_etaria == 0:
-            pontuacao_esperada = 0  
-        else:
-            pontuacao_esperada = (idade_meses * total_perguntas) / meses_faixa_etaria
+            if pd.isna(meses_faixa_etaria) or meses_faixa_etaria == 0:
+                pontuacao_esperada = 0  
+            else:
+                pontuacao_esperada = (idade_meses * total_perguntas) / meses_faixa_etaria
 
-        if pontuacao_esperada_manual is not None:
-            pontuacao_esperada = pontuacao_esperada_manual
+            if pontuacao_esperada_manual is not None:
+                pontuacao_esperada = pontuacao_esperada_manual
 
-        if pontos_obtidos >= pontuacao_esperada:
-            status = "Sem atraso ✅"
-        elif pontos_obtidos >= (pontuacao_esperada - 2):
-            status = "Alerta para atraso ⚠️"
-        else:
-            status = "Possível Déficit 🚨"
+            if pontos_obtidos >= pontuacao_esperada:
+                status = "Sem atraso ✅"
+            elif pontos_obtidos >= (pontuacao_esperada - 2):
+                status = "Alerta para atraso ⚠️"
+            else:
+                status = "Possível Déficit 🚨"
 
-        df_resultado.append({
-            "Aluno": row["Aluno"],
-            "Pontuação Obtida": pontos_obtidos,
-            "Pontuação Esperada": round(pontuacao_esperada, 2),
-            "Status": status
-        })
+            df_resultado.append({
+                "Aluno": row["Aluno"],
+                "Categoria": categoria,
+                "Pontuação Obtida": pontos_obtidos,
+                "Pontuação Esperada": round(pontuacao_esperada, 2),
+                "Status": status
+            })
 
     df_resultado = pd.DataFrame(df_resultado)
-    return df_resultado if not df_resultado.empty else pd.DataFrame(columns=["Aluno", "Pontuação Obtida", "Pontuação Esperada", "Status"])
+    return df_resultado if not df_resultado.empty else None
 
 
 def run_cmae_mode():
@@ -89,7 +98,7 @@ def run_cmae_mode():
         st.warning("⚠️ Nenhum dado encontrado para os filtros selecionados.")
         return
 
-    categorias = ["Socialização", "Linguagem", "Cognição", "Auto cuidado", "Desenvolvimento Motor"]
+    categorias = ["Todas"] + CATEGORIAS_VALIDAS
     categoria_selecionada = st.sidebar.selectbox("🧩 **Categoria**", categorias)
 
     aluno_lista = df_filtrado["Aluno"].dropna().unique().tolist()
@@ -140,7 +149,6 @@ def run_cmae_mode():
         plt.xticks(rotation=30, ha="right")
         st.pyplot(fig)
 
-        # Criar botão para baixar o gráfico de status individualmente
         buffer = io.BytesIO()
         fig.savefig(buffer, format="png")
         buffer.seek(0)
