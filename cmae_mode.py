@@ -3,24 +3,22 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import io
 from utils import carregar_dados, calcular_idade
-from docx import Document
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib import colors
 
-# 🔹 Cores fixas para os status
 CORES_FIXAS_STATUS = {
-    "Sem atraso ✅": "#2E7D32",  
-    "Alerta para atraso ⚠️": "#FFC107",  
+    "Sem atraso ✅": "#2E7D32",
+    "Alerta para atraso ⚠️": "#FFC107",
     "Possível Déficit 🚨": "#D32F2F"
 }
 
-# 🔹 Lista de categorias conhecidas
 CATEGORIAS_VALIDAS = ["Socialização", "Linguagem", "Cognição", "Auto cuidado", "Desenvolvimento Motor"]
 
 def calcular_status_aluno(df, categoria, meses_faixa_etaria, pontuacao_esperada_manual=None):
-    """Calcula o status do aluno para uma ou várias categorias."""
-    
-    # 🔹 Garante que 'categoria' seja sempre uma lista
     categorias = CATEGORIAS_VALIDAS if categoria == "Todas" else [categoria]
-    
     df_resultado = []
 
     for _, row in df.iterrows():
@@ -66,99 +64,107 @@ def calcular_status_aluno(df, categoria, meses_faixa_etaria, pontuacao_esperada_
     df_resultado = pd.DataFrame(df_resultado)
     return df_resultado if not df_resultado.empty else None
 
+def gerar_pdf(filtros, status_alunos, img_grafico):
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=letter)
+    elements = []
+    styles = getSampleStyleSheet()
+
+    elements.append(Paragraph("Relatório de Avaliação - CMAE", styles["Title"]))
+    elements.append(Spacer(1, 12))
+
+    for chave, valor in filtros.items():
+        elements.append(Paragraph(f"<b>{chave}:</b> {valor}", styles["Normal"]))
+    elements.append(Spacer(1, 12))
+
+    if not status_alunos.empty:
+        elements.append(Paragraph("📊 Estatísticas dos Alunos", styles["Heading2"]))
+        dados_tabela = [status_alunos.columns.tolist()] + status_alunos.values.tolist()
+        tabela = Table(dados_tabela)
+        tabela.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, 0), colors.grey),
+            ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
+            ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+            ("BOTTOMPADDING", (0, 0), (-1, 0), 12),
+            ("BACKGROUND", (0, 1), (-1, -1), colors.beige),
+            ("GRID", (0, 0), (-1, -1), 1, colors.black),
+        ]))
+        elements.append(tabela)
+        elements.append(Spacer(1, 12))
+
+    if img_grafico:
+        elements.append(Paragraph("📊 Distribuição de Status", styles["Heading2"]))
+        elements.append(Spacer(1, 12))
+
+        img_path = "grafico_temp.png"
+        with open(img_path, "wb") as f:
+            f.write(img_grafico.getvalue())
+
+        elements.append(Image(img_path, width=400, height=300))
+        elements.append(Spacer(1, 12))
+
+    doc.build(elements)
+    buffer.seek(0)
+    return buffer
 
 def run_cmae_mode():
-    """ Executa a interface do Modo CMAE no Streamlit. """
     st.title("📊 Painel Interativo de Avaliação (Modo CMAE)")
-    
-    uploaded_file = st.file_uploader("📂 Envie o arquivo da planilha de respostas", type=["xlsx"])
+
+    uploaded_file = st.file_uploader("📂 Envie a planilha de respostas", type=["xlsx"])
     
     if not uploaded_file:
-        st.info("🔍 Por favor, envie a planilha para iniciar a análise.")
+        st.info("🔍 Envie a planilha para iniciar a análise.")
         return
     
     df = carregar_dados(uploaded_file)
-
-    if "Unidade" not in df.columns or "Aluno" not in df.columns or "Meses_Totais" not in df.columns:
-        st.error("🚨 Arquivo com colunas inesperadas. Verifique o formato.")
-        return
-    
     df["Unidade"] = df["Unidade"].astype(str).str.strip()
-    
+
     st.sidebar.header("🎯 **Filtros**")
-    
     unidades = ["Todas"] + sorted(df["Unidade"].dropna().unique().tolist())
-    unidade_selecionada = st.sidebar.selectbox("🏫 **Unidade Escolar**", unidades).strip()
-
-    df_filtrado = df.copy()
-    if unidade_selecionada != "Todas":
-        df_filtrado = df_filtrado[df_filtrado["Unidade"] == unidade_selecionada]
-
-    if df_filtrado.empty:
-        st.warning("⚠️ Nenhum dado encontrado para os filtros selecionados.")
-        return
+    unidade_selecionada = st.sidebar.selectbox("🏫 **Unidade Escolar**", unidades)
 
     categorias = ["Todas"] + CATEGORIAS_VALIDAS
     categoria_selecionada = st.sidebar.selectbox("🧩 **Categoria**", categorias)
 
-    aluno_lista = df_filtrado["Aluno"].dropna().unique().tolist()
-    aluno_lista.insert(0, "Todos")  
+    aluno_lista = df["Aluno"].dropna().unique().tolist()
+    aluno_lista.insert(0, "Todos")
     aluno_selecionado = st.sidebar.selectbox("👦 **Pesquise um aluno**", aluno_lista)
 
-    if st.sidebar.button("🔄 **Atualizar Dados**"):
-        st.rerun()
-
-    if aluno_selecionado != "Todos":
-        df_filtrado = df_filtrado[df_filtrado["Aluno"] == aluno_selecionado]
-
-    status_alunos = calcular_status_aluno(df_filtrado, categoria_selecionada, 12)
-
-    if not status_alunos.empty:
-        st.write(f"### 📊 Estatísticas para {aluno_selecionado if aluno_selecionado != 'Todos' else 'Todos os alunos'} na Categoria: {categoria_selecionada}")
-        st.dataframe(status_alunos)
-    else:
-        st.warning("⚠️ Nenhuma informação disponível para esta categoria.")
-
-    # 🔹 Configuração dos gráficos
-    st.sidebar.header("📊 **Configuração dos Gráficos**")
     tipo_grafico = st.sidebar.selectbox("📊 **Escolha o tipo de gráfico**", ["Barras", "Pizza", "Linha"])
     largura = st.sidebar.slider("📏 **Largura do Gráfico**", min_value=4, max_value=12, value=6, step=1)
     altura = st.sidebar.slider("📐 **Altura do Gráfico**", min_value=3, max_value=10, value=4, step=1)
 
-    # 🔹 Exibição do gráfico de distribuição de status dos alunos
-    if not status_alunos.empty:
-        st.subheader("📊 Distribuição de Status dos Alunos")
+    if st.sidebar.button("🔄 **Atualizar Dados**"):
+        st.rerun()
+
+    if unidade_selecionada != "Todas":
+        df = df[df["Unidade"] == unidade_selecionada]
+    if aluno_selecionado != "Todos":
+        df = df[df["Aluno"] == aluno_selecionado]
+
+    status_alunos = calcular_status_aluno(df, categoria_selecionada, 12)
+
+    if status_alunos is not None and not status_alunos.empty:
+        st.write(f"### 📊 Estatísticas para {aluno_selecionado} na Categoria: {categoria_selecionada}")
+        st.dataframe(status_alunos)
+
         status_counts = status_alunos["Status"].value_counts()
-
         fig, ax = plt.subplots(figsize=(largura, altura))
-
         cores = [CORES_FIXAS_STATUS.get(status, "#000000") for status in status_counts.index]
 
         if tipo_grafico == "Barras":
             ax.bar(status_counts.index, status_counts.values, color=cores)
-            ax.set_ylabel("Quantidade de Alunos")
-
         elif tipo_grafico == "Pizza":
             ax.pie(status_counts.values, labels=status_counts.index, autopct='%1.1f%%', colors=cores)
             ax.axis("equal")
-
         elif tipo_grafico == "Linha":
-            ax.plot(status_counts.index, status_counts.values, marker='o', linestyle='-', color=cores[0])
-            ax.set_ylabel("Quantidade de Alunos")
+            ax.plot(status_counts.index, status_counts.values, marker='o', linestyle='-')
 
-        plt.xticks(rotation=30, ha="right")
         st.pyplot(fig)
 
-        buffer = io.BytesIO()
-        fig.savefig(buffer, format="png")
-        buffer.seek(0)
+        buffer_grafico = io.BytesIO()
+        fig.savefig(buffer_grafico, format="png")
+        buffer_grafico.seek(0)
 
-        st.download_button(
-            label="📥 Baixar Gráfico de Status",
-            data=buffer,
-            file_name="grafico_status_alunos.png",
-            mime="image/png"
-        )
-
-    else:
-        st.warning("⚠️ Nenhum dado de status disponível.")
+        st.download_button("📥 Baixar Relatório Completo (PDF)", gerar_pdf({}, status_alunos, buffer_grafico), file_name="relatorio_CMAE.pdf", mime="application/pdf")
