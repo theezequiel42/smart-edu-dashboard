@@ -154,7 +154,8 @@ def gerar_pdf(filtros, status_alunos, img_grafico):
                 ("GRID", (0, 0), (-1, -1), 1, colors.black),
             ]))
 
-        
+        elements.append(Spacer(1, 12))
+        elements.append(Paragraph("Observação: É importante considerar que os resultados referem-se apenas a faixa etária analisada, sendo esta uma avaliação parcial, com vistas qualitativas."))
         elements.append(tabela)
         elements.append(Spacer(1, 12))
 
@@ -166,6 +167,7 @@ def gerar_pdf(filtros, status_alunos, img_grafico):
         elements.append(Image(img_path, width=400, height=300))
         elements.append(Spacer(1, 12))
         elements.append(Paragraph("O Inventário Portage Operacionalizado (IPO) vem sendo respondido pelos professores dos Centros de Educação Infantil, de maneira adaptada e parcial, como forma de levantar dados e acompanhar o desenvolvimento das crianças.", styles["Normal"]))
+        elements.append(Spacer(1, 12))
         elements.append(Paragraph("Para investigação mais aprofundada, sugere-se a aplicação do Inventário Dimensional de Avaliação do Desenvolvimento Infantil - IDADI.", styles["Normal"]))
         elements.append(Spacer(1, 12))
         elements.append(Paragraph("____________________________", styles["Normal"]))
