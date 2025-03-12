@@ -118,11 +118,15 @@ def calcular_status_aluno(df, categoria, meses_faixa_etaria, pontuacao_esperada_
 
 def gerar_pdf(filtros, status_alunos, img_grafico):
     buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=letter)
+    doc = SimpleDocTemplate(buffer, pagesize=letter, leftMargin=40, rightMargin=40, topMargin=40, bottomMargin=40)
     elements = []
     styles = getSampleStyleSheet()
 
-    elements.append(Paragraph("Relatório de Avaliação - CMAE", styles["Title"]))
+    elements.append(Paragraph("Centro Municipal de Atendimento Especializado – CMAE", styles["Title"]))
+    elements.append(Spacer(1, 12))
+
+    for chave, valor in filtros.items():
+        elements.append(Paragraph(f"<b>{chave}:</b> {valor}", styles["Normal"]))
     elements.append(Spacer(1, 12))
 
     for chave, valor in filtros.items():
@@ -130,31 +134,42 @@ def gerar_pdf(filtros, status_alunos, img_grafico):
     elements.append(Spacer(1, 12))
 
     if not status_alunos.empty:
-        elements.append(Paragraph("📊 Estatísticas dos Alunos", styles["Heading2"]))
-        dados_tabela = [status_alunos.columns.tolist()] + status_alunos.values.tolist()
-        tabela = Table(dados_tabela)
-        tabela.setStyle(TableStyle([
-            ("BACKGROUND", (0, 0), (-1, 0), colors.grey),
-            ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
-            ("ALIGN", (0, 0), (-1, -1), "CENTER"),
-            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-            ("BOTTOMPADDING", (0, 0), (-1, 0), 12),
-            ("BACKGROUND", (0, 1), (-1, -1), colors.beige),
-            ("GRID", (0, 0), (-1, -1), 1, colors.black),
-        ]))
+        elements.append(Paragraph("📊 Estatística(s) do(s) Aluno(s) - INVENTÁRIO PORTAGE", styles["Heading2"]))
+        
+        alunos_unicos = status_alunos["Aluno"].unique()
+        for aluno in alunos_unicos:
+            elements.append(Spacer(1, 6))
+            elements.append(Paragraph(f"<b>Aluno:</b> {aluno}", styles["Normal"]))
+            elements.append(Spacer(1, 6))
+
+            dados_tabela = status_alunos[status_alunos["Aluno"] == aluno][["Categoria", "Pontuação Obtida", "Pontuação Esperada", "Status"]]
+            tabela = Table([dados_tabela.columns.tolist()] + dados_tabela.values.tolist(), colWidths=[120, 110, 110, 120])
+            tabela.setStyle(TableStyle([
+                ("BACKGROUND", (0, 0), (-1, 0), colors.grey),
+                ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
+                ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                ("BOTTOMPADDING", (0, 0), (-1, 0), 8),
+                ("BACKGROUND", (0, 1), (-1, -1), colors.beige),
+                ("GRID", (0, 0), (-1, -1), 1, colors.black),
+            ]))
+
+        
         elements.append(tabela)
         elements.append(Spacer(1, 12))
 
     if img_grafico:
-        elements.append(Paragraph("📊 Distribuição de Status", styles["Heading2"]))
-        elements.append(Spacer(1, 12))
-
         img_path = "grafico_temp.png"
         with open(img_path, "wb") as f:
             f.write(img_grafico.getvalue())
 
         elements.append(Image(img_path, width=400, height=300))
         elements.append(Spacer(1, 12))
+        elements.append(Paragraph("O Inventário Portage Operacionalizado (IPO) vem sendo respondido pelos professores dos Centros de Educação Infantil, de maneira adaptada e parcial, como forma de levantar dados e acompanhar o desenvolvimento das crianças.", styles["Normal"]))
+        elements.append(Paragraph("Para investigação mais aprofundada, sugere-se a aplicação do Inventário Dimensional de Avaliação do Desenvolvimento Infantil - IDADI.", styles["Normal"]))
+        elements.append(Spacer(1, 12))
+        elements.append(Paragraph("____________________________", styles["Normal"]))
+        elements.append(Paragraph("Vanusa Apolinário - Psicóloga CRP 12/09868", styles["Normal"])) 
 
     doc.build(elements)
     buffer.seek(0)
