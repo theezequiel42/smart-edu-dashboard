@@ -116,17 +116,13 @@ def calcular_status_aluno(df, categoria, meses_faixa_etaria, pontuacao_esperada_
     df_resultado = pd.DataFrame(df_resultado)
     return df_resultado if not df_resultado.empty else None
 
-def gerar_pdf(filtros, status_alunos, img_grafico):
+def gerar_pdf(filtros, status_alunos, img_grafico,):
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=letter, leftMargin=40, rightMargin=40, topMargin=40, bottomMargin=40)
     elements = []
     styles = getSampleStyleSheet()
 
     elements.append(Paragraph("Centro Municipal de Atendimento Especializado – CMAE", styles["Title"]))
-    elements.append(Spacer(1, 12))
-
-    for chave, valor in filtros.items():
-        elements.append(Paragraph(f"<b>{chave}:</b> {valor}", styles["Normal"]))
     elements.append(Spacer(1, 12))
 
     for chave, valor in filtros.items():
@@ -140,7 +136,13 @@ def gerar_pdf(filtros, status_alunos, img_grafico):
         for aluno in alunos_unicos:
             elements.append(Spacer(1, 6))
             elements.append(Paragraph(f"<b>Aluno:</b> {aluno}", styles["Normal"]))
-            elements.append(Spacer(1, 6))
+            # Adicionar novas informações ao relatório
+            elements.append(Paragraph(f"<b>Unidade Escolar:</b> {filtros.get('Unidade Escolar', 'N/A')}", styles["Normal"]))
+            elements.append(Paragraph(f"<b>Data da Avaliação:</b> {filtros.get('Data da Avaliação', 'N/A')}", styles["Normal"]))
+            elements.append(Paragraph(f"<b>Data de Nascimento:</b> {filtros.get('Data de Nascimento', 'N/A')}", styles["Normal"]))
+            elements.append(Paragraph(f"<b>Idade no Dia da Avaliação:</b> {filtros.get('Idade', 'N/A')} anos", styles["Normal"]))
+            elements.append(Paragraph(f"<b>Professor:</b> {filtros.get('Professor', 'N/A')}", styles["Normal"]))
+            elements.append(Spacer(1, 12))
 
             dados_tabela = status_alunos[status_alunos["Aluno"] == aluno][["Categoria", "Pontuação Obtida", "Pontuação Esperada", "Status"]]
             tabela = Table([dados_tabela.columns.tolist()] + dados_tabela.values.tolist(), colWidths=[120, 110, 110, 120])
@@ -163,11 +165,8 @@ def gerar_pdf(filtros, status_alunos, img_grafico):
         with open(img_path, "wb") as f:
             f.write(img_grafico.getvalue())
 
-        elements.append(Image(img_path, width=400, height=300))
-        elements.append(Spacer(1, 12))
-        elements.append(Paragraph("O Inventário Portage Operacionalizado (IPO) vem sendo respondido pelos professores dos Centros de Educação Infantil, de maneira adaptada e parcial, como forma de levantar dados e acompanhar o desenvolvimento das crianças.", styles["Normal"]))
-        elements.append(Spacer(1, 12))
-        elements.append(Paragraph("Para investigação mais aprofundada, sugere-se a aplicação do Inventário Dimensional de Avaliação do Desenvolvimento Infantil - IDADI.", styles["Normal"]))
+        elements.append(Image(img_path, width=350, height=250))
+        elements.append(Paragraph("O Inventário Portage Operacionalizado (IPO) vem sendo respondido pelos professores dos Centros de Educação Infantil, de maneira adaptada e parcial, como forma de levantar dados e acompanhar o desenvolvimento das crianças.Para investigação mais aprofundada, sugere-se a aplicação do Inventário Dimensional de Avaliação do Desenvolvimento Infantil - IDADI.", styles["Normal"]))
         elements.append(Spacer(1, 12))
         elements.append(Paragraph("____________________________", styles["Normal"]))
         elements.append(Paragraph("Vanusa Apolinário - Psicóloga CRP 12/09868", styles["Normal"])) 
