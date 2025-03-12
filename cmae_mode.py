@@ -154,8 +154,8 @@ def gerar_pdf(filtros, status_alunos, img_grafico):
                 ("GRID", (0, 0), (-1, -1), 1, colors.black),
             ]))
 
-        elements.append(Spacer(1, 12))
         elements.append(Paragraph("Observação: É importante considerar que os resultados referem-se apenas a faixa etária analisada, sendo esta uma avaliação parcial, com vistas qualitativas."))
+        elements.append(Spacer(1, 12))
         elements.append(tabela)
         elements.append(Spacer(1, 12))
 
