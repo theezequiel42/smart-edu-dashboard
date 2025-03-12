@@ -157,7 +157,6 @@ def gerar_pdf(filtros, status_alunos, img_grafico):
         elements.append(Paragraph("Observação: É importante considerar que os resultados referem-se apenas a faixa etária analisada, sendo esta uma avaliação parcial, com vistas qualitativas."))
         elements.append(Spacer(1, 12))
         elements.append(tabela)
-        elements.append(Spacer(1, 12))
 
     if img_grafico:
         img_path = "grafico_temp.png"
