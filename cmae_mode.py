@@ -236,3 +236,10 @@ def run_cmae_mode():
         buffer_grafico.seek(0)
 
         st.download_button("📥 Baixar Relatório Completo (PDF)", gerar_pdf({}, status_alunos, buffer_grafico), file_name="relatorio_CMAE.pdf", mime="application/pdf")
+        # Criar botão de download apenas para o gráfico
+        st.download_button(
+            "📥 Baixar Gráfico",
+            buffer_grafico,
+            file_name="grafico_CMAE.png",
+            mime="image/png"
+        )
