@@ -7,6 +7,8 @@ from reportlab.pdfgen import canvas
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib import colors
+from docx import Document
+from docx.shared import Inches
 
 def carregar_dados(uploaded_file):
     """Carrega os dados do arquivo e calcula a idade do aluno na data da avaliação."""
@@ -213,6 +215,68 @@ def gerar_pdf(filtros, status_alunos, img_grafico,):
     buffer.seek(0)
     return buffer
 
+# Função para gerar o relatório em Word
+def gerar_word(filtros, status_alunos, img_grafico):
+    buffer = io.BytesIO()
+    doc = Document()
+
+    doc.add_heading("Centro Municipal de Atendimento Especializado – CMAE", level=1)
+
+    # Adicionar filtros ao documento
+    for chave, valor in filtros.items():
+        doc.add_paragraph(f"{chave}: {valor}")
+
+    doc.add_heading("📊 Estatísticas do(s) Aluno(s) - INVENTÁRIO PORTAGE", level=2)
+
+    alunos_unicos = status_alunos["Aluno"].unique()
+    for aluno in alunos_unicos:
+        doc.add_paragraph(f"\nAluno: {aluno}", style="List Bullet")
+        doc.add_paragraph(f"Unidade Escolar: {filtros.get('Unidade Escolar', 'N/A')}")
+        doc.add_paragraph(f"Data da Avaliação: {filtros.get('Data da Avaliação', 'N/A')}")
+        doc.add_paragraph(f"Data de Nascimento: {filtros.get('Data de Nascimento', 'N/A')}")
+        doc.add_paragraph(f"Idade no Dia da Avaliação: {filtros.get('Idade', 'N/A')} anos")
+        doc.add_paragraph(f"Professor: {filtros.get('Professor', 'N/A')}")
+
+        # Criando tabela de pontuação
+        tabela = status_alunos[status_alunos["Aluno"] == aluno][["Categoria", "Pontuação Obtida", "Pontuação Esperada", "Status"]]
+        table = doc.add_table(rows=1, cols=4)
+        table.style = "Table Grid"
+        hdr_cells = table.rows[0].cells
+        hdr_cells[0].text = "Categoria"
+        hdr_cells[1].text = "Pontuação Obtida"
+        hdr_cells[2].text = "Pontuação Esperada"
+        hdr_cells[3].text = "Status"
+
+        for _, row in tabela.iterrows():
+            row_cells = table.add_row().cells
+            row_cells[0].text = row["Categoria"]
+            row_cells[1].text = str(row["Pontuação Obtida"])
+            row_cells[2].text = str(row["Pontuação Esperada"])
+            row_cells[3].text = row["Status"]
+
+    # Adiciona a análise do aluno
+    texto_analise = gerar_texto_analise(status_alunos)
+    doc.add_paragraph("\nAnálise Geral:")
+    doc.add_paragraph(texto_analise)
+
+    # Adicionar imagem do gráfico se disponível
+    if img_grafico:
+        img_path = "grafico_temp.png"
+        with open(img_path, "wb") as f:
+            f.write(img_grafico.getvalue())
+
+        doc.add_paragraph("\n📊 Gráfico de Resultados:")
+        doc.add_picture(img_path, width=Inches(4))
+
+    doc.add_paragraph("\nO Inventário Portage Operacionalizado (IPO) vem sendo respondido pelos professores dos Centros de Educação Infantil, de maneira adaptada e parcial, como forma de levantar dados e acompanhar o desenvolvimento das crianças. Para investigação mais aprofundada, sugere-se a aplicação do Inventário Dimensional de Avaliação do Desenvolvimento Infantil - IDADI.")
+
+    doc.add_paragraph("\n____________________________")
+    doc.add_paragraph("Vanusa Apolinário - Psicóloga CRP 12/09868")
+
+    doc.save(buffer)
+    buffer.seek(0)
+    return buffer
+
 def run_cmae_mode():
     st.title("📊 Painel Interativo de Avaliação (Modo CMAE)")
 
@@ -279,4 +343,11 @@ def run_cmae_mode():
             buffer_grafico,
             file_name="grafico_CMAE.png",
             mime="image/png"
+        )
+        buffer_word = gerar_word({}, status_alunos, buffer_grafico)
+        st.download_button(
+        "📥 Baixar Relatório Completo (Word)",
+        buffer_word,
+        file_name="relatorio_CMAE.docx",
+        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
         )
