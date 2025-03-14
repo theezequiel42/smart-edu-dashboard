@@ -207,9 +207,6 @@ def gerar_pdf(filtros, status_alunos, img_grafico,):
         elements.append(Spacer(1, 12))
         elements.append(Paragraph("O Inventário Portage Operacionalizado (IPO) vem sendo respondido pelos professores dos Centros de Educação Infantil, de maneira adaptada e parcial, como forma de levantar dados e acompanhar o desenvolvimento das crianças."
         " Para investigação mais aprofundada, sugere-se a aplicação do Inventário Dimensional de Avaliação do Desenvolvimento Infantil - IDADI.", styles["Normal"]))
-        elements.append(Spacer(1, 12))
-        elements.append(Paragraph("____________________________", styles["Normal"]))
-        elements.append(Paragraph("Vanusa Apolinário - Psicóloga CRP 12/09868", styles["Normal"])) 
 
     doc.build(elements)
     buffer.seek(0)
