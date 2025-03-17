@@ -19,29 +19,28 @@ def carregar_dados(uploaded_file):
         "Unidade escolar de origem do encaminhamento": "Unidade",
         "Nome completo do aluno:": "Aluno",
         "Data da avaliação:": "Data_Avaliacao",
-        "Data de Nascimento:": "Data_Nascimento"
-    }, inplace=True, errors="ignore")
+        "Data de Nascimento:": "Data_Nascimento",
+        "Nome do professor e demais profissionais que responderam o formulário:": "Professor"
+    }, inplace=True)
+
+    if "Data_Nascimento" not in df or "Data_Avaliacao" not in df:
+        return None
 
     df["Data_Nascimento"] = pd.to_datetime(df["Data_Nascimento"], errors="coerce")
     df["Data_Avaliacao"] = pd.to_datetime(df["Data_Avaliacao"], errors="coerce")
 
     df["Ano"], df["Meses"], df["Meses_Totais"] = zip(*df.apply(
-        lambda row: calcular_idade(row["Data_Nascimento"], row["Data_Avaliacao"]), axis=1))
+        lambda row: calcular_idade(row["Data_Nascimento"], row["Data_Avaliacao"]) if pd.notna(row["Data_Nascimento"]) and pd.notna(row["Data_Avaliacao"]) else (None, None, None),
+        axis=1
+    ))
 
     return df
 
 def calcular_idade(data_nascimento, data_avaliacao):
-    """Calcula a idade do aluno na data da avaliação, em anos e meses, considerando arredondamento de até 2 dias."""
+    """Calcula a idade do aluno na data da avaliação."""
     if pd.isnull(data_nascimento) or pd.isnull(data_avaliacao):
         return None, None, None
 
-    data_nascimento = pd.to_datetime(data_nascimento, errors="coerce")
-    data_avaliacao = pd.to_datetime(data_avaliacao, errors="coerce")
-
-    if pd.isnull(data_nascimento) or pd.isnull(data_avaliacao):
-        return None, None, None
-
-    # Calculando a idade exata
     idade_anos = data_avaliacao.year - data_nascimento.year
     idade_meses = data_avaliacao.month - data_nascimento.month
 
@@ -52,7 +51,6 @@ def calcular_idade(data_nascimento, data_avaliacao):
         idade_anos -= 1
         idade_meses += 12
 
-    # Calcula idade total em meses
     meses_totais = (idade_anos * 12) + idade_meses
 
     # Ajuste de arredondamento de até 2 dias
@@ -167,17 +165,10 @@ def gerar_pdf(filtros, status_alunos, img_grafico,):
     if not status_alunos.empty:
         elements.append(Paragraph("📊 Estatística(s) do(s) Aluno(s) - INVENTÁRIO PORTAGE", styles["Heading2"]))
         
-        alunos_unicos = status_alunos["Aluno"].unique()
-        for aluno in alunos_unicos:
+        for aluno in status_alunos["Aluno"].unique():
             elements.append(Spacer(1, 6))
             elements.append(Paragraph(f"<b>Aluno:</b> {aluno}", styles["Normal"]))
-            elements.append(Paragraph(f"<b>Unidade Escolar:</b> {filtros.get('Unidade Escolar',)}", styles["Normal"]))
-            elements.append(Paragraph(f"<b>Data da Avaliação:</b> {filtros.get('Data da Avaliação',)}", styles["Normal"]))
-            elements.append(Paragraph(f"<b>Data de Nascimento:</b> {filtros.get('Data de Nascimento',)}", styles["Normal"]))
-            elements.append(Paragraph(f"<b>Idade no Dia da Avaliação:</b> {filtros.get('Idade',)} anos", styles["Normal"]))
-            elements.append(Paragraph(f"<b>Professor:</b> {filtros.get('Professor',)}", styles["Normal"]))
             elements.append(Spacer(1, 12))
-
             dados_tabela = status_alunos[status_alunos["Aluno"] == aluno][["Categoria", "Pontuação Obtida", "Pontuação Esperada", "Status"]]
             tabela = Table([dados_tabela.columns.tolist()] + dados_tabela.values.tolist(), colWidths=[120, 110, 110, 120])
             tabela.setStyle(TableStyle([
@@ -186,7 +177,6 @@ def gerar_pdf(filtros, status_alunos, img_grafico,):
                 ("ALIGN", (0, 0), (-1, -1), "CENTER"),
                 ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
                 ("BOTTOMPADDING", (0, 0), (-1, 0), 8),
-                ("BACKGROUND", (0, 1), (-1, -1), colors.beige),
                 ("GRID", (0, 0), (-1, -1), 1, colors.black),
             ]))
 
@@ -267,9 +257,6 @@ def gerar_word(filtros, status_alunos, img_grafico):
 
     doc.add_paragraph("\nO Inventário Portage Operacionalizado (IPO) vem sendo respondido pelos professores dos Centros de Educação Infantil, de maneira adaptada e parcial, como forma de levantar dados e acompanhar o desenvolvimento das crianças. Para investigação mais aprofundada, sugere-se a aplicação do Inventário Dimensional de Avaliação do Desenvolvimento Infantil - IDADI.")
 
-    doc.add_paragraph("\n____________________________")
-    doc.add_paragraph("Vanusa Apolinário - Psicóloga CRP 12/09868")
-
     doc.save(buffer)
     buffer.seek(0)
     return buffer
@@ -284,6 +271,10 @@ def run_cmae_mode():
         return
     
     df = carregar_dados(uploaded_file)
+    if df is None:
+        st.error("Erro ao carregar os dados. Verifique se as colunas necessárias estão presentes.")
+        return
+    
     df["Unidade"] = df["Unidade"].astype(str).str.strip()
 
     st.sidebar.header("🎯 **Filtros**")
@@ -308,6 +299,24 @@ def run_cmae_mode():
         df = df[df["Unidade"] == unidade_selecionada]
     if aluno_selecionado != "Todos":
         df = df[df["Aluno"] == aluno_selecionado]
+    if not df.empty:
+        aluno_info = df.iloc[0]
+        filtros = {
+            "Unidade Escolar": aluno_info.get("Unidade", "N/A"),
+            "Nome do Aluno": aluno_info.get("Aluno", "N/A"),
+            "Data da Avaliação": aluno_info.get("Data_Avaliacao", "N/A"),
+            "Data de Nascimento": aluno_info.get("Data_Nascimento", "N/A"),
+            "Idade": f"{aluno_info.get('Ano', 'N/A')} anos e {aluno_info.get('Meses', 'N/A')} meses",
+            "Professor": aluno_info.get("Professor", "N/A")
+        }
+
+        st.write("### 📄 Informações do Aluno")
+        for key, value in filtros.items():
+            st.write(f"**{key}:** {value}")
+
+    else:
+        st.warning("Nenhum dado encontrado com os filtros selecionados.")
+        return
 
     status_alunos = calcular_status_aluno(df, categoria_selecionada, 12)
 
