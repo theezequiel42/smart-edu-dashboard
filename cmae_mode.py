@@ -16,8 +16,8 @@ def carregar_dados(uploaded_file):
     df.columns = df.columns.str.strip()
 
     df.rename(columns={
-        "Unidade escolar de origem do encaminhamento": "Unidade",
         "Nome completo do aluno:": "Aluno",
+        "Unidade escolar de origem do encaminhamento": "Unidade",
         "Data da avaliação:": "Data_Avaliacao",
         "Data de Nascimento:": "Data_Nascimento",
         "Nome do professor e demais profissionais que responderam o formulário:": "Professor"
@@ -166,8 +166,6 @@ def gerar_pdf(filtros, status_alunos, img_grafico,):
         elements.append(Paragraph("📊 Estatística(s) do(s) Aluno(s) - INVENTÁRIO PORTAGE", styles["Heading2"]))
         
         for aluno in status_alunos["Aluno"].unique():
-            elements.append(Spacer(1, 6))
-            elements.append(Paragraph(f"<b>Aluno:</b> {aluno}", styles["Normal"]))
             elements.append(Spacer(1, 12))
             dados_tabela = status_alunos[status_alunos["Aluno"] == aluno][["Categoria", "Pontuação Obtida", "Pontuação Esperada", "Status"]]
             tabela = Table([dados_tabela.columns.tolist()] + dados_tabela.values.tolist(), colWidths=[120, 110, 110, 120])
@@ -217,13 +215,6 @@ def gerar_word(filtros, status_alunos, img_grafico):
 
     alunos_unicos = status_alunos["Aluno"].unique()
     for aluno in alunos_unicos:
-        doc.add_paragraph(f"\nAluno: {aluno}", style="List Bullet")
-        doc.add_paragraph(f"Unidade Escolar: {filtros.get('Unidade Escolar', 'N/A')}")
-        doc.add_paragraph(f"Data da Avaliação: {filtros.get('Data da Avaliação', 'N/A')}")
-        doc.add_paragraph(f"Data de Nascimento: {filtros.get('Data de Nascimento', 'N/A')}")
-        doc.add_paragraph(f"Idade no Dia da Avaliação: {filtros.get('Idade', 'N/A')} anos")
-        doc.add_paragraph(f"Professor: {filtros.get('Professor', 'N/A')}")
-
         # Criando tabela de pontuação
         tabela = status_alunos[status_alunos["Aluno"] == aluno][["Categoria", "Pontuação Obtida", "Pontuação Esperada", "Status"]]
         table = doc.add_table(rows=1, cols=4)
@@ -302,8 +293,8 @@ def run_cmae_mode():
     if not df.empty:
         aluno_info = df.iloc[0]
         filtros = {
-            "Unidade Escolar": aluno_info.get("Unidade", "N/A"),
             "Nome do Aluno": aluno_info.get("Aluno", "N/A"),
+            "Unidade Escolar": aluno_info.get("Unidade", "N/A"),
             "Data da Avaliação": aluno_info.get("Data_Avaliacao", "N/A"),
             "Data de Nascimento": aluno_info.get("Data_Nascimento", "N/A"),
             "Idade": f"{aluno_info.get('Ano', 'N/A')} anos e {aluno_info.get('Meses', 'N/A')} meses",
@@ -342,7 +333,13 @@ def run_cmae_mode():
         fig.savefig(buffer_grafico, format="png")
         buffer_grafico.seek(0)
 
-        st.download_button("📥 Baixar Relatório Completo (PDF)", gerar_pdf({}, status_alunos, buffer_grafico), file_name="relatorio_CMAE.pdf", mime="application/pdf")
+        st.download_button(
+            "📥 Baixar Relatório Completo (PDF)",
+            gerar_pdf(filtros, status_alunos, buffer_grafico),
+            file_name="relatorio_CMAE.pdf",
+            mime="application/pdf"
+        )
+        
         # Criar botão de download apenas para o gráfico
         st.download_button(
             "📥 Baixar Gráfico",
@@ -350,7 +347,7 @@ def run_cmae_mode():
             file_name="grafico_CMAE.png",
             mime="image/png"
         )
-        buffer_word = gerar_word({}, status_alunos, buffer_grafico)
+        buffer_word = gerar_word(filtros, status_alunos, buffer_grafico)
         st.download_button(
         "📥 Baixar Relatório Completo (Word)",
         buffer_word,
