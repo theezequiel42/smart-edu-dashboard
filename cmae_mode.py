@@ -11,26 +11,60 @@ from docx import Document
 from docx.shared import Inches
 
 def carregar_dados(uploaded_file):
-    """Carrega os dados do arquivo e calcula a idade do aluno na data da avaliação."""
+    """Carrega os dados do Excel, renomeia colunas flexivelmente e trata ausências."""
+    
     df = pd.read_excel(uploaded_file, engine="openpyxl")
     df.columns = df.columns.str.strip()
 
-    df.rename(columns={
-        "Nome completo do aluno:": "Aluno",
-        "Unidade escolar de origem do encaminhamento": "Unidade",
-        "Data da avaliação:": "Data_Avaliacao",
-        "Data de Nascimento:": "Data_Nascimento",
-        "Nome do professor e demais profissionais que responderam o formulário:": "Professor"
-    }, inplace=True)
+    # 🔧 Lista de colunas esperadas com mapeamento parcial
+    mapeamento_colunas = {
+        "Aluno": "nome completo do aluno",
+        "Unidade": "unidade escolar de origem",
+        "Data_Avaliacao": "data da avaliação",
+        "Data_Nascimento": "data de nascimento",
+        "Professor": "nome do professor"
+    }
 
-    if "Data_Nascimento" not in df or "Data_Avaliacao" not in df:
+    # ✅ Separação entre obrigatórias e opcionais
+    colunas_obrigatorias = ["Data_Nascimento", "Data_Avaliacao"]
+    colunas_opcionais = ["Aluno", "Unidade", "Professor"]
+
+    # 🔄 Renomeia colunas baseado em partes do nome
+    colunas_renomear = {}
+    for destino, trecho in mapeamento_colunas.items():
+        for col in df.columns:
+            if trecho in col.lower() and destino not in colunas_renomear.values():
+                colunas_renomear[col] = destino
+                break  # para evitar múltiplos mapeamentos
+
+    df.rename(columns=colunas_renomear, inplace=True)
+
+    # 🚨 Verificar colunas duplicadas após renomear
+    colunas_duplicadas = df.columns[df.columns.duplicated()].tolist()
+    if colunas_duplicadas:
+        st.error(f"❌ A planilha contém colunas duplicadas: {colunas_duplicadas}.")
         return None
 
+    # ❗ Verifica se colunas obrigatórias estão presentes
+    for col in colunas_obrigatorias:
+        if col not in df.columns:
+            st.error(f"❌ Coluna obrigatória '{col}' não encontrada na planilha.")
+            return None
+
+    # 🛠️ Preenche colunas opcionais faltantes com "Não informado"
+    for col in colunas_opcionais:
+        if col not in df.columns:
+            df[col] = "Não informado"
+
+    # 📅 Converte colunas de data
     df["Data_Nascimento"] = pd.to_datetime(df["Data_Nascimento"], errors="coerce")
     df["Data_Avaliacao"] = pd.to_datetime(df["Data_Avaliacao"], errors="coerce")
 
+    # 📏 Calcula idade (em anos, meses e total de meses)
     df["Ano"], df["Meses"], df["Meses_Totais"] = zip(*df.apply(
-        lambda row: calcular_idade(row["Data_Nascimento"], row["Data_Avaliacao"]) if pd.notna(row["Data_Nascimento"]) and pd.notna(row["Data_Avaliacao"]) else (None, None, None),
+        lambda row: calcular_idade(row["Data_Nascimento"], row["Data_Avaliacao"])
+        if pd.notna(row["Data_Nascimento"]) and pd.notna(row["Data_Avaliacao"])
+        else (None, None, None),
         axis=1
     ))
 
