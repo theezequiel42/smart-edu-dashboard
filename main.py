@@ -2,9 +2,10 @@ import streamlit as st
 
 from sme_mode import run_sme_mode
 from cmae_mode import run_cmae_mode
+from converter_mode import run_converter_mode  # Novo modo
 
 def exibir_tela_inicial():
-    # Aplicando estilo personalizado para centralizar e ajustar tamanhos
+    # Estilo visual
     st.markdown(
         """
         <style>
@@ -14,6 +15,7 @@ def exibir_tela_inicial():
             align-items: center;
             gap: 50px;
             margin-top: 50px;
+            flex-wrap: wrap;
         }
         .logo-container img {
             height: 200px;
@@ -32,6 +34,7 @@ def exibir_tela_inicial():
             display: flex;
             justify-content: center;
             gap: 50px;
+            flex-wrap: wrap;
             margin-top: 20px;
         }
         .stButton>button {
@@ -56,38 +59,46 @@ def exibir_tela_inicial():
 
     st.title("Smart Edu Dashboard")
 
-    # Exibe opções de modo com logos centralizados
+    # Logos
     st.markdown('<div class="logo-container">', unsafe_allow_html=True)
-    col1, col2 = st.columns([1, 1])
-
+    col1, col2, col3 = st.columns([1, 1, 1])
     with col1:
         st.image("images/logo_sme.png", use_container_width=True)
     with col2:
         st.image("images/logo_cmae.png", use_container_width=True)
+    with col3:
+        st.image("images/logo_converter.png", use_container_width=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # Exibe botões para selecionar o modo
+    # Botões
     st.markdown('<div class="button-container">', unsafe_allow_html=True)
-    col3, col4 = st.columns([1, 1])
+    col4, col5, col6 = st.columns([1, 1, 1])
 
-    with col3:
+    with col4:
         if st.button("📊 Acessar Modo SME"):
             st.session_state["modo"] = "SME"
             st.rerun()
 
-    with col4:
+    with col5:
         if st.button("🎯 Acessar Modo CMAE"):
             st.session_state["modo"] = "CMAE"
             st.rerun()
 
+    with col6:
+        if st.button("📄 Conversor de Arquivos"):
+            st.session_state["modo"] = "CONVERSOR"
+            st.rerun()
+
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # Verifica o modo selecionado e executa a função correta
+    # Executa o modo escolhido
     if "modo" in st.session_state:
-        st.empty()  # Limpa a tela inicial
+        st.empty()  # limpa a tela inicial
         if st.session_state["modo"] == "SME":
             run_sme_mode()
         elif st.session_state["modo"] == "CMAE":
             run_cmae_mode()
+        elif st.session_state["modo"] == "CONVERSOR":
+            run_converter_mode()
 
 exibir_tela_inicial()
