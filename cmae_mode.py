@@ -279,7 +279,11 @@ def run_cmae_mode():
     aluno_lista.insert(0, "Todos")
     aluno_selecionado = st.sidebar.selectbox("👦 **Pesquise um aluno**", aluno_lista)
 
-    tipo_grafico = st.sidebar.selectbox("📊 **Escolha o tipo de gráfico**", ["Barras", "Pizza", "Linha"])
+    tipo_grafico = st.sidebar.selectbox(
+    "📊 **Escolha o tipo de gráfico**",
+    ["Barras", "Barras Empilhadas", "Barras por Resposta", "Pizza", "Linha"]
+    )
+
     largura = st.sidebar.slider("📏 **Largura do Gráfico**", min_value=4, max_value=12, value=6, step=1)
     altura = st.sidebar.slider("📐 **Altura do Gráfico**", min_value=3, max_value=10, value=4, step=1)
 
@@ -320,12 +324,58 @@ def run_cmae_mode():
         cores = [CORES_FIXAS_STATUS.get(status, "#000000") for status in status_counts.index]
 
         if tipo_grafico == "Barras":
+            status_counts = status_alunos["Status"].value_counts()
+            cores = [CORES_FIXAS_STATUS.get(status, "#000000") for status in status_counts.index]
             ax.bar(status_counts.index, status_counts.values, color=cores)
+            ax.set_ylabel("Quantidade")
+            ax.set_title("Distribuição dos Status")
+
+        elif tipo_grafico == "Barras Empilhadas":
+            df_stack = status_alunos.groupby(["Categoria", "Status"]).size().unstack(fill_value=0)
+            cores_stack = [CORES_FIXAS_STATUS.get(status, "#000000") for status in df_stack.columns]
+            df_stack.plot(kind="bar", stacked=True, ax=ax, color=cores_stack)
+            ax.set_ylabel("Quantidade")
+            ax.set_title("Distribuição de Status por Categoria")
+            ax.legend(title="Status", bbox_to_anchor=(1.05, 1), loc="upper left")
+            plt.tight_layout()
+
         elif tipo_grafico == "Pizza":
+            status_counts = status_alunos["Status"].value_counts()
+            cores = [CORES_FIXAS_STATUS.get(status, "#000000") for status in status_counts.index]
             ax.pie(status_counts.values, labels=status_counts.index, autopct='%1.1f%%', colors=cores)
             ax.axis("equal")
+            ax.set_title("Distribuição dos Status")
+
         elif tipo_grafico == "Linha":
+            status_counts = status_alunos["Status"].value_counts()
             ax.plot(status_counts.index, status_counts.values, marker='o', linestyle='-')
+            ax.set_ylabel("Quantidade")
+            ax.set_title("Distribuição dos Status")
+        
+        elif tipo_grafico == "Barras por Resposta":
+            categorias_ativas = CATEGORIAS_VALIDAS if categoria_selecionada == "Todas" else [categoria_selecionada]
+
+            # Inicializa um dicionário para contar "Sim", "Às vezes" e "Não" por categoria
+            dados_respostas = {cat: {"Sim": 0, "Às vezes": 0, "Não": 0} for cat in categorias_ativas}
+
+            for _, row in df.iterrows():
+                for cat in categorias_ativas:
+                    colunas = [col for col in df.columns if col.startswith(cat)]
+                    for col in colunas:
+                        valor = row[col]
+                        if valor in ["Sim", "Às vezes", "Não"]:
+                            dados_respostas[cat][valor] += 1
+
+            # Converte para DataFrame para facilitar a plotagem
+            df_resposta = pd.DataFrame(dados_respostas).T[["Sim", "Às vezes", "Não"]]
+
+            cores_resp = ["#2E7D32", "#FFC107", "#D32F2F"]
+            df_resposta.plot(kind="bar", stacked=True, ax=ax, color=cores_resp)
+
+            ax.set_ylabel("Quantidade de Respostas")
+            ax.set_title("Distribuição das Respostas por Categoria")
+            ax.legend(title="Resposta", bbox_to_anchor=(1.05, 1), loc="upper left")
+            plt.tight_layout()
 
         st.pyplot(fig)
 
