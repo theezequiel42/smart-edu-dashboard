@@ -3,44 +3,41 @@ import streamlit as st
 from sme_mode import run_sme_mode
 from cmae_mode import run_cmae_mode
 from converter_mode import run_converter_mode  # Novo modo
+from formulario_portage import run_formulario_portage  # Novo modo
+from desenvolvimento_motor_mode import run_desenvolvimento_motor_mode  # Novo modo
+from ia_mode import run_ia_mode  # Novo modo
 
 def exibir_tela_inicial():
     # Estilo visual
     st.markdown(
         """
         <style>
-        .logo-container {
+        .modo-container {
             display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 50px;
-            margin-top: 50px;
             flex-wrap: wrap;
+            justify-content: center;
+            gap: 40px;
+            margin-top: 30px;
         }
-        .logo-container img {
-            height: 200px;
-            width: 200px;
+        .modo-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 220px;
+        }
+        .modo-item img {
+            width: 180px;
+            height: 180px;
             object-fit: cover;
             border: 5px solid #007BFF;
             border-radius: 20px;
+            margin-bottom: 10px;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-            transition: transform 0.3s, box-shadow 0.3s;
-        }
-        .logo-container img:hover {
-            transform: scale(1.1);
-            box-shadow: 0 6px 8px rgba(0, 0, 0, 0.5);
-        }
-        .button-container {
-            display: flex;
-            justify-content: center;
-            gap: 50px;
-            flex-wrap: wrap;
-            margin-top: 20px;
         }
         .stButton>button {
             width: 220px;
-            height: 60px;
-            font-size: 20px;
+            height: 50px;
+            font-size: 18px;
             border-radius: 15px;
             background-color: #007BFF;
             color: white;
@@ -58,38 +55,58 @@ def exibir_tela_inicial():
     )
 
     st.title("Smart Edu Dashboard")
+    st.markdown("## Selecione o Modo de Visualização:")
 
-    # Logos
-    st.markdown('<div class="logo-container">', unsafe_allow_html=True)
-    col1, col2, col3 = st.columns([1, 1, 1])
+    # Layout com logos + botões agrupados
+    col1, col2, col3 = st.columns(3)
     with col1:
-        st.image("images/logo_sme.png", use_container_width=True)
-    with col2:
-        st.image("images/logo_cmae.png", use_container_width=True)
-    with col3:
-        st.image("images/logo_converter.png", use_container_width=True)
-    st.markdown('</div>', unsafe_allow_html=True)
-
-    # Botões
-    st.markdown('<div class="button-container">', unsafe_allow_html=True)
-    col4, col5, col6 = st.columns([1, 1, 1])
-
-    with col4:
-        if st.button("📊 Acessar Modo SME"):
+        st.markdown('<div class="modo-item">', unsafe_allow_html=True)
+        st.image("images/logo_sme.png")
+        if st.button("📊 Modo SME"):
             st.session_state["modo"] = "SME"
             st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
 
-    with col5:
-        if st.button("🎯 Acessar Modo CMAE"):
+    with col2:
+        st.markdown('<div class="modo-item">', unsafe_allow_html=True)
+        st.image("images/logo_cmae.png")
+        if st.button("🎯 Modo CMAE"):
             st.session_state["modo"] = "CMAE"
             st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
 
-    with col6:
-        if st.button("📄 Conversor de Arquivos"):
+    with col3:
+        st.markdown('<div class="modo-item">', unsafe_allow_html=True)
+        st.image("images/logo_converter.png")
+        if st.button("📄 Conversor"):
             st.session_state["modo"] = "CONVERSOR"
             st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
 
-    st.markdown('</div>', unsafe_allow_html=True)
+    col4, col5, col6 = st.columns(3)
+    with col4:
+        st.markdown('<div class="modo-item">', unsafe_allow_html=True)
+        st.image("images/logo_portage.png")
+        if st.button("📝 Formulário Portage"):
+            st.session_state["modo"] = "PORTAGE"
+            st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    with col5:
+        st.markdown('<div class="modo-item">', unsafe_allow_html=True)
+        st.image("images/logo_motor.png")
+        if st.button("🧠 Desenvolvimento Motor"):
+            st.session_state["modo"] = "MOTOR"
+            st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    with col6:
+        st.markdown('<div class="modo-item">', unsafe_allow_html=True)
+        st.image("images/logo_ia.png")
+        if st.button("🤖 Modo IA"):
+            st.session_state["modo"] = "IA"
+            st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
 
     # Executa o modo escolhido
     if "modo" in st.session_state:
@@ -100,5 +117,11 @@ def exibir_tela_inicial():
             run_cmae_mode()
         elif st.session_state["modo"] == "CONVERSOR":
             run_converter_mode()
+        elif st.session_state["modo"] == "PORTAGE":
+            run_formulario_portage()
+        elif st.session_state["modo"] == "MOTOR":
+            run_desenvolvimento_motor_mode()
+        elif st.session_state["modo"] == "IA":
+            run_ia_mode()
 
 exibir_tela_inicial()
