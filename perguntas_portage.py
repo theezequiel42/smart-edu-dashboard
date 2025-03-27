@@ -331,7 +331,7 @@ PERGUNTAS_PORTAGE = {
             "Conta de memória de 1 a 100 (pedir que pare no 40, e continue no 80, caso não erre até o 40)."
         ]
     },
-    "Auto cuidados": {
+    "Auto cuidado": {
         1: [
             "Suga e deglute líquidos.",
             "Toma mingau / sopinha.",
