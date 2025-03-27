@@ -10,7 +10,7 @@ def run_formulario_portage():
     st.title("📝 Avaliação de Desenvolvimento - Formulário Interativo")
 
     nome = st.text_input("Nome da criança")
-    data_nascimento = st.date_input("Data de nascimento da criança")
+    data_nascimento = st.date_input("Data de nascimento da criança. (ANO-MÊS-DIA)")
     data_avaliacao = datetime.date.today()
 
     if not nome:
