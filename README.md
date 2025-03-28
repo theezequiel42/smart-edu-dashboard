@@ -1,197 +1,272 @@
-# Smart Edu Dashboard - Ferramenta de Análise de Avaliação Educacional Interativa
+# Smart Edu Dashboard: Uma plataforma abrangente de análise de dados educacionais
 
-O Smart Edu Dashboard é um aplicativo da web baseado em Streamlit que permite que profissionais educacionais analisem e visualizem dados de avaliação de alunos por meio de dois modos especializados: SME (Análise de Pesquisa) e CMAE (Avaliação de Desenvolvimento do Aluno). O aplicativo fornece visualização de dados interativa, relatórios personalizáveis ​​e ferramentas de análise abrangentes para instituições educacionais.
+O Smart Edu Dashboard é uma plataforma integrada de análise educacional que simplifica a análise de dados, o gerenciamento de avaliações e o processamento de documentos para instituições educacionais. A plataforma combina vários módulos especializados para fornecer aos educadores ferramentas poderosas para avaliação de alunos, rastreamento de desenvolvimento e tarefas administrativas.
 
-O aplicativo oferece recursos robustos para análise de dados, incluindo:
-- Filtragem dinâmica de dados de avaliação por unidade escolar, categoria e aluno individual
-- Várias opções de visualização, incluindo gráficos de barras, gráficos de pizza e gráficos de linhas
-- Geração automatizada de relatórios em formatos PDF e Word
-- Cálculo em tempo real de métricas de desenvolvimento do aluno
-- Painel interativo com estatísticas resumidas e distribuição de status
+O painel oferece seis modos operacionais distintos:
+- Modo SME para análise de dados de pesquisa e geração de relatórios
+- Modo CMAE para processamento de avaliações de desenvolvimento infantil usando o Inventário Portage Operacionalizado (IPO)
+- Modo Converter para lidar com conversões de formato de documento
+- Modo Portage Form para avaliações interativas de desenvolvimento infantil
+- Modo Motor Development para rastreamento de habilidades motoras de alunos
+- Modo AI para análise de dados educacionais e respostas automatizadas (em desenvolvimento)
 
 ## Estrutura do Repositório
 ```
 .
-├── main.py # Ponto de entrada do aplicativo e inicialização da IU
-├── sme_mode.py # Implementação do modo de análise de pesquisa
-├── cmae_mode.py # Implementação do modo de análise de avaliação do aluno
-├── requirements.txt # Dependências do pacote Python
-└── auxiliar.txt # Instruções de configuração e implantação
+├── main.py                         # Ponto de entrada do aplicativo e interface de seleção de modo
+├── sme_mode.py                     # Módulo de análise e visualização de dados de pesquisa
+├── cmae_mode.py                    # Módulo de processamento de avaliação do desenvolvimento infantil
+├── converter_mode.py               # Utilitários de conversão de formato de arquivo
+├── desenvolvimento_motor_mode.py   # Módulo de rastreamento do desenvolvimento motor
+├── formulario_portage.py           # Implementação do formulário de avaliação do Portage
+├── ia_mode.py                      # Módulo de análise educacional com tecnologia de IA
+├── perguntas_portage.py            # Banco de dados de perguntas de avaliação do Portage
+├── iniciar_dashboard.bat           # Arquivo em lote do Windows para iniciar o aplicativo
+└── requirements.txt                # Dependências de pacote Python
 ```
 
-## Instruções de uso
+## Uso Instruções
 ### Pré-requisitos
 - Python 3.x
-- gerenciador de pacotes pip
+- Navegador da Web
+- Conexão com a Internet para instalação do pacote
+
+Pacotes Python necessários:
+```
+streamlit
+pandas
+matplotlib
+seaborn
+python-docx
+openpyxl
+reportlab
+pdf2docx
+PyPDF2
+Pillow
+PyMuPDF
+```
 
 ### Instalação
+1. Clone o repositório:
 ```bash
-# Instale as dependências necessárias
-python -m pip install -r requirements.txt
+git clone https://github.com/theezequiel42/smart-edu-dashboard
+cd smart-edu-dashboard
+```
 
-# Execute o aplicativo
-python -m streamlit run main.py
+2. Instale os pacotes necessários:
+```bash
+pip install -r requirements.txt
 ```
 
 ### Início rápido
-1. Inicie o aplicativo usando o comando acima
-2. Selecione o modo SME ou CMAE na tela inicial
-3. Carregue um arquivo Excel contendo os dados da avaliação
-4. Use os filtros da barra lateral para personalizar sua análise
-5. Gere e baixe relatórios com base nos dados visualizados
-
-### Exemplos mais detalhados
-
-**Uso do modo SME:**
-```python
-# Carregue o arquivo Excel de dados da pesquisa
-# Selecione o curso no menu suspenso
-# Escolha as perguntas para analisar
-# Selecione o tipo de visualização (Barra/Pizza/Linha)
-# Baixe o relatório do Word com análise
+1. Inicie o aplicativo:
+- No Windows: clique duas vezes em `iniciar_dashboard.bat`
+- No Linux/MacOS:
+```bash
+streamlit run main.py
 ```
 
-**Uso do modo CMAE:**
+2. Selecione um modo operacional na interface do painel:
+- Clique no ícone do modo desejado
+- Siga as instruções específicas do modo
+
+### Exemplos mais detalhados
+1. Modo SME:
 ```python
-# Carregue o arquivo Excel de avaliação do aluno
-# Filtre por unidade escolar
-# Selecione a categoria (Socialização/Linguagem/Cognição/etc.)
-# Escolha o aluno no menu suspenso
-# Visualize a distribuição de status
-# Baixe o relatório em PDF
+# Carregar dados da pesquisa
+# Selecionar opções de visualização
+# Gerar e baixar relatórios
+```
+
+2. Modo CMAE:
+```python
+# Inserir dados de avaliação do aluno
+# Processar avaliações de IPO
+# Gerar relatórios em PDF
+```
+
+3. Modo Conversor:
+```python
+# Dividir arquivos PDF
+# Converter imagens em PDF
+# Converter PDF em Word
 ```
 
 ### Solução de problemas
+Problemas comuns:
+1. O aplicativo falha ao iniciar:
+- Verifique a instalação do Python
+- Verifique se todas as dependências estão instaladas
+- Mensagem de erro: "Nenhum módulo encontrado"
+Solução: Execute `pip install -r requirements.txt`
 
-**Problemas comuns:**
+2. Erros de conversão de arquivo:
+- Certifique-se de que as permissões do arquivo estejam corretas
+- Verifique o formato do arquivo de entrada
+- Mensagem de erro: "Permissão negada"
+Solução: Execute com as permissões apropriadas
 
-1. Erros de upload de arquivo
-- Problema: "Não foi possível carregar o arquivo Excel"
-- Solução: Certifique-se de que o arquivo esteja no formato .xlsx
-- Verifique as permissões do arquivo
-
-2. Problemas de visualização
-- Problema: Gráficos não são exibidos
-- Solução: Verifique se os dados contêm respostas válidas
-- Verifique se os nomes das colunas correspondem ao formato esperado
-
-3. Erros de geração de relatórios
-- Problema: falha na exportação de PDF/Word
-- Solução: garanta espaço em disco suficiente
-- Verifique as permissões de gravação no diretório de saída
+3. A geração do relatório falha:
+- Verifique o espaço em disco disponível
+- Verifique a gravação permissões no diretório de saída
+- Mensagem de erro: "Não foi possível criar o arquivo"
+Solução: Libere espaço em disco ou ajuste as permissões
 
 ## Fluxo de dados
-O aplicativo processa dados de avaliação educacional por meio de um pipeline estruturado, do upload do arquivo à visualização e ao relatório.
+O aplicativo processa dados educacionais por meio de módulos especializados, transformando a entrada bruta em insights e relatórios acionáveis.
 
 ```ascii
-[Arquivo Excel] -> [Carregamento de dados] -> [Processamento/filtragem] -> [Análise] -> [Visualização] -> [Geração de relatórios]
+[Entrada]      ->  [Processamento] -> [Saída]
+|                       |                |
+v                       v                v
+Relatórios           análise         arquivos
+Visualizações       conversão          dados
+Formulários         Avaliação      PDF/Word Docs
 ```
 
-Interações de componentes principais:
-1. Carregamento de dados por meio do carregador de arquivos do Streamlit
-2. Processamento do Pandas DataFrame para manipulação de dados
-3. Matplotlib/Seaborn para geração de visualização
-4. ReportLab/python-docx para criação de relatórios
-5. Filtragem e recálculo de métricas em tempo real
-6. Atualizações dinâmicas da IU com base nas seleções do usuário
-7. Cálculo de status automatizado com base nos critérios de avaliação
-8. Funcionalidade de exportação para relatórios gerados
+Interações de componentes:
+1. O usuário insere dados por meio da interface da web
+2. Os dados são processados ​​por módulos de modo específicos
+3. Os resultados são armazenados na memória durante a sessão
+4. As visualizações são geradas usando matplotlib/seaborn
+5. Os relatórios são criados usando docx/reportlab
+6. Os arquivos são convertidos usando bibliotecas especializadas
+7. A saída é entregue por meio da interface streamlit
 
-# Smart Edu Dashboard - Interactive Educational Assessment Analysis Tool
 
-Smart Edu Dashboard is a Streamlit-based web application that enables educational professionals to analyze and visualize student assessment data through two specialized modes: SME (Survey Analysis) and CMAE (Student Development Assessment). The application provides interactive data visualization, customizable reporting, and comprehensive analysis tools for educational institutions.
 
-The application offers robust features for data analysis including:
-- Dynamic filtering of assessment data by school unit, category, and individual student
-- Multiple visualization options including bar charts, pie charts, and line graphs
-- Automated report generation in PDF and Word formats
-- Real-time calculation of student development metrics
-- Interactive dashboard with summary statistics and status distribution
+
+# Smart Edu Dashboard: A Comprehensive Educational Data Analysis Platform
+
+Smart Edu Dashboard is an integrated educational analytics platform that streamlines data analysis, assessment management, and document processing for educational institutions. The platform combines multiple specialized modules to provide educators with powerful tools for student evaluation, development tracking, and administrative tasks.
+
+The dashboard offers six distinct operational modes:
+- SME Mode for survey data analysis and report generation
+- CMAE Mode for processing child development assessments using the Inventário Portage Operacionalizado (IPO)
+- Converter Mode for handling document format conversions
+- Portage Form Mode for interactive child development assessments
+- Motor Development Mode for student motor skills tracking
+- AI Mode for educational data analysis and automated responses (in development)
 
 ## Repository Structure
 ```
 .
-├── main.py                 # Application entry point and UI initialization
-├── sme_mode.py            # Survey analysis mode implementation
-├── cmae_mode.py           # Student assessment analysis mode implementation
-├── requirements.txt       # Python package dependencies
-└── auxiliar.txt          # Setup and deployment instructions
+├── main.py                         # Application entry point and mode selection interface
+├── sme_mode.py                     # Survey data analysis and visualization module
+├── cmae_mode.py                    # Child development assessment processing module
+├── converter_mode.py               # File format conversion utilities
+├── desenvolvimento_motor_mode.py   # Motor development tracking module
+├── formulario_portage.py           # Portage assessment form implementation
+├── ia_mode.py                      # AI-powered educational analysis module
+├── perguntas_portage.py            # Portage assessment question database
+├── iniciar_dashboard.bat           # Windows batch file for launching the application
+└── requirements.txt                # Python package dependencies
 ```
 
 ## Usage Instructions
 ### Prerequisites
 - Python 3.x
-- pip package manager
+- Web browser
+- Internet connection for package installation
+
+Required Python packages:
+```
+streamlit
+pandas
+matplotlib
+seaborn
+python-docx
+openpyxl
+reportlab
+pdf2docx
+PyPDF2
+Pillow
+PyMuPDF
+```
 
 ### Installation
+1. Clone the repository:
 ```bash
-# Install required dependencies
-python -m pip install -r requirements.txt
+git clone https://github.com/theezequiel42/smart-edu-dashboard
+cd smart-edu-dashboard
+```
 
-# Run the application
-python -m streamlit run main.py
+2. Install required packages:
+```bash
+pip install -r requirements.txt
 ```
 
 ### Quick Start
-1. Launch the application using the command above
-2. Select either SME or CMAE mode from the initial screen
-3. Upload an Excel file containing the assessment data
-4. Use the sidebar filters to customize your analysis
-5. Generate and download reports based on the visualized data
+1. Launch the application:
+   - On Windows: Double-click `iniciar_dashboard.bat`
+   - On Linux/MacOS:
+   ```bash
+   streamlit run main.py
+   ```
+
+2. Select an operational mode from the dashboard interface:
+   - Click on the desired mode icon
+   - Follow the mode-specific instructions
 
 ### More Detailed Examples
-
-**SME Mode Usage:**
+1. SME Mode:
 ```python
-# Upload survey data Excel file
-# Select course from dropdown
-# Choose questions to analyze
-# Select visualization type (Bar/Pie/Line)
-# Download Word report with analysis
+# Upload survey data
+# Select visualization options
+# Generate and download reports
 ```
 
-**CMAE Mode Usage:**
+2. CMAE Mode:
 ```python
-# Upload student assessment Excel file
-# Filter by school unit
-# Select category (Socialization/Language/Cognition/etc.)
-# Choose student from dropdown
-# View status distribution
-# Download PDF report
+# Input student assessment data
+# Process IPO evaluations
+# Generate PDF reports
+```
+
+3. Converter Mode:
+```python
+# Split PDF files
+# Convert images to PDF
+# Convert PDF to Word
 ```
 
 ### Troubleshooting
+Common Issues:
+1. Application fails to start:
+   - Verify Python installation
+   - Check if all dependencies are installed
+   - Error message: "No module found"
+   Solution: Run `pip install -r requirements.txt`
 
-**Common Issues:**
+2. File conversion errors:
+   - Ensure file permissions are correct
+   - Verify input file format
+   - Error message: "Permission denied"
+   Solution: Run with appropriate permissions
 
-1. File Upload Errors
-   - Problem: "Unable to load Excel file"
-   - Solution: Ensure file is in .xlsx format
-   - Check file permissions
-
-2. Visualization Issues
-   - Problem: Graphs not displaying
-   - Solution: Verify data contains valid responses
-   - Check column names match expected format
-
-3. Report Generation Errors
-   - Problem: PDF/Word export fails
-   - Solution: Ensure sufficient disk space
+3. Report generation fails:
+   - Check available disk space
    - Verify write permissions in output directory
+   - Error message: "Could not create file"
+   Solution: Free up disk space or adjust permissions
 
 ## Data Flow
-The application processes educational assessment data through a structured pipeline from file upload to visualization and reporting.
+The application processes educational data through specialized modules, transforming raw input into actionable insights and reports.
 
 ```ascii
-[Excel File] -> [Data Loading] -> [Processing/Filtering] -> [Analysis] -> [Visualization] -> [Report Generation]
+[Input] -> [Processing] -> [Output]
+ |            |             |
+ v            v             v
+Files     Analysis      Reports
+Data    Conversion     Visualizations
+Forms   Assessment    PDF/Word Docs
 ```
 
-Key component interactions:
-1. Data loading through Streamlit's file uploader
-2. Pandas DataFrame processing for data manipulation
-3. Matplotlib/Seaborn for visualization generation
-4. ReportLab/python-docx for report creation
-5. Real-time filtering and recalculation of metrics
-6. Dynamic UI updates based on user selections
-7. Automated status calculation based on assessment criteria
-8. Export functionality for generated reports
+Component Interactions:
+1. User inputs data through web interface
+2. Data is processed by specific mode modules
+3. Results are stored in memory during session
+4. Visualizations are generated using matplotlib/seaborn
+5. Reports are created using docx/reportlab
+6. Files are converted using specialized libraries
+7. Output is delivered through streamlit interface
