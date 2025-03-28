@@ -6,22 +6,7 @@ from docx import Document
 import io
 import os
 import openpyxl
-
-def quebrar_rotulo(texto, limite=15):
-    """ Quebra rótulos longos sem dividir palavras no meio. """
-    palavras = texto.split()
-    resultado = []
-    linha_atual = ""
-    
-    for palavra in palavras:
-        if len(linha_atual) + len(palavra) + 1 <= limite:
-            linha_atual += " " + palavra if linha_atual else palavra
-        else:
-            resultado.append(linha_atual)
-            linha_atual = palavra
-    resultado.append(linha_atual)
-    
-    return "\n".join(resultado)
+from utils import quebrar_rotulo
 
 def run_sme_mode():
     st.title("📊 Painel Interativo de Avaliação de Cursos (Modo SME)")

@@ -1,83 +1,109 @@
 import streamlit as st
-import datetime
+from datetime import datetime
 import pandas as pd
-from cmae_mode import calcular_idade, calcular_status_aluno, gerar_pdf, gerar_word, CATEGORIAS_VALIDAS
+from cmae_mode import calcular_idade, calcular_status_aluno, gerar_pdf, gerar_word
+from utils import gerar_grafico_respostas 
 from perguntas_portage import PERGUNTAS_PORTAGE
 import io
 
-
 def run_formulario_portage():
-    st.title("📝 Avaliação de Desenvolvimento - Formulário Interativo")
+    st.title("📝 Avaliação - Escala Portage")
 
     nome = st.text_input("Nome da criança")
-    data_nascimento = st.date_input("Data de nascimento da criança. (ANO-MÊS-DIA)")
-    data_avaliacao = datetime.date.today()
+    data_nascimento = st.date_input("Data de nascimento (ANO-MES-DIA)")
+    data_avaliacao = st.date_input("Data da avaliação (ANO-MES-DIA)",)
+    unidade = st.text_input("Unidade Escolar")
+    professor = st.text_input("Nome do Professor")
 
-    if not nome:
-        st.warning("Por favor, preencha o nome da criança.")
-        return
+    ano, meses, meses_totais = calcular_idade(data_nascimento, data_avaliacao)
+    faixa_etaria = None
 
-    # Calcular idade
-    anos, meses, total_meses = calcular_idade(data_nascimento, data_avaliacao)
-    st.write(f"**Idade atual:** {anos} anos e {meses} meses")
+    if meses_totais < 12:
+        faixa_etaria = 1
+    elif meses_totais < 24:
+        faixa_etaria = 2
+    elif meses_totais < 36:
+        faixa_etaria = 3
+    elif meses_totais < 48:
+        faixa_etaria = 4
+    elif meses_totais < 60:
+        faixa_etaria = 5
+    elif meses_totais < 84:
+        faixa_etaria = 6
 
-    # Determinar faixa etária
-    faixa_etaria = min(total_meses // 12 + 1, 6)  # de 1 a 6
-    st.write(f"**Faixa etária correspondente:** {faixa_etaria} ({(faixa_etaria-1)} a {faixa_etaria} anos)")
+    st.markdown(f"**Idade na data da avaliação:** {ano} ano(s) e {meses} mes(es)  ")
+    st.markdown(f"**Faixa etária:** {faixa_etaria} ({meses_totais} meses)")
 
-    categoria = st.selectbox("Selecione a categoria para avaliação", CATEGORIAS_VALIDAS)
-    perguntas_categoria = PERGUNTAS_PORTAGE.get(categoria, {}).get(faixa_etaria, [])
+    categoria = st.selectbox("Selecione a categoria", list(PERGUNTAS_PORTAGE.keys()))
 
-    if not perguntas_categoria:
+    perguntas = PERGUNTAS_PORTAGE.get(categoria, {}).get(faixa_etaria, [])
+
+    if not perguntas:
         st.warning("Nenhuma pergunta disponível para esta faixa etária e categoria.")
         return
 
-    respostas = []
-    st.subheader("Responda às questões:")
-    for idx, pergunta in enumerate(perguntas_categoria, 1):
-        resposta = st.radio(f"{idx:02d}. {pergunta}", ["Sim", "Às vezes", "Não"], key=f"resp_{idx}")
-        respostas.append(resposta)
+    st.subheader("Responda as perguntas:")
+    respostas = {}
+    for i, pergunta in enumerate(perguntas, 1):
+        resposta = st.radio(f"{i:02d}. {pergunta}", ["Sim", "Às vezes", "Não"], key=f"resp_{i}")
+        respostas[pergunta] = resposta
 
-    if st.button("📊 Gerar Relatório"):
-        # Montar DataFrame com os dados
-        colunas = [f"{categoria} - {i+1:02d}" for i in range(len(respostas))]
-        dados = {"Aluno": nome, "Data_Nascimento": data_nascimento, "Data_Avaliacao": data_avaliacao,
-                 "Ano": anos, "Meses": meses, "Meses_Totais": total_meses, **dict(zip(colunas, respostas))}
-        df = pd.DataFrame([dados])
+    if st.button("📊 Gerar Resultado"):
+        # Criar DataFrame de respostas simulando estrutura
+        colunas = {f"{categoria} {i+1:02d}": respostas[pergunta] for i, pergunta in enumerate(perguntas)}
 
-        status_df = calcular_status_aluno(df, categoria, meses_faixa_etaria=12)
-        if status_df is None:
-            st.error("Erro ao calcular o status do aluno.")
-            return
-
-        st.subheader("📋 Resultado da Avaliação")
-        st.dataframe(status_df)
-
-        filtros = {
-            "Nome do Aluno": nome,
-            "Data de Nascimento": data_nascimento.strftime("%d/%m/%Y"),
-            "Data da Avaliação": data_avaliacao.strftime("%d/%m/%Y"),
-            "Idade": f"{anos} anos e {meses} meses",
-            "Categoria Avaliada": categoria
+        df_simulado = {
+            "Aluno": [nome],
+            "Unidade": [unidade],
+            "Data_Nascimento": [data_nascimento],
+            "Data_Avaliacao": [data_avaliacao],
+            "Professor": [professor],
+            "Ano": [ano],
+            "Meses": [meses],
+            "Meses_Totais": [meses_totais],
+            **{col: [valor] for col, valor in colunas.items()}
         }
 
-        # Gerar gráfico em branco (por ora)
-        buffer_vazio = io.BytesIO()
+        df = pd.DataFrame(df_simulado)
 
-        col1, col2 = st.columns(2)
+        status_alunos = calcular_status_aluno(df, categoria, meses_faixa_etaria=12)
 
-        with col1:
-            st.download_button(
-                "📥 Baixar Relatório em PDF",
-                gerar_pdf(filtros, status_df, buffer_vazio),
-                file_name=f"relatorio_{nome}_portage.pdf",
-                mime="application/pdf"
-            )
+        if status_alunos is not None and not status_alunos.empty:
+            st.success("Resultado gerado com sucesso!")
+            st.dataframe(status_alunos)
 
-        with col2:
-            st.download_button(
-                "📥 Baixar Relatório em Word",
-                gerar_word(filtros, status_df, buffer_vazio),
-                file_name=f"relatorio_{nome}_portage.docx",
-                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-            )
+            largura = st.slider("Largura do gráfico", 4, 12, 6)
+            altura = st.slider("Altura do gráfico", 3, 10, 4)
+
+            # Usando o novo gráfico de respostas
+            fig, ax = gerar_grafico_respostas(df, categoria_selecionada=categoria, largura=largura, altura=altura)
+
+            if fig:
+                st.pyplot(fig)
+
+                buffer_grafico = io.BytesIO()
+                fig.savefig(buffer_grafico, format="png")
+                buffer_grafico.seek(0)
+
+                filtros = {
+                    "Nome do Aluno": nome,
+                    "Unidade Escolar": unidade,
+                    "Data da Avaliação": data_avaliacao.strftime("%d/%m/%Y"),
+                    "Data de Nascimento": data_nascimento.strftime("%d/%m/%Y"),
+                    "Idade": f"{ano} anos e {meses} meses",
+                    "Professor": professor
+                }
+
+                st.download_button(
+                    "📥 Baixar Relatório (PDF)",
+                    gerar_pdf(filtros, status_alunos, buffer_grafico),
+                    file_name="relatorio_portage.pdf",
+                    mime="application/pdf"
+                )
+
+                st.download_button(
+                    "📥 Baixar Relatório (Word)",
+                    gerar_word(filtros, status_alunos, buffer_grafico),
+                    file_name="relatorio_portage.docx",
+                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                )

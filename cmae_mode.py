@@ -9,6 +9,7 @@ from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib import colors
 from docx import Document
 from docx.shared import Inches
+from utils import CATEGORIAS_VALIDAS
 
 def carregar_dados(uploaded_file):
     """Carrega os dados do Excel, renomeia colunas flexivelmente e trata ausências."""
@@ -100,8 +101,6 @@ CORES_FIXAS_STATUS = {
     "Alerta para atraso ⚠️": "#FFC107",
     "Possível Déficit 🚨": "#D32F2F"
 }
-
-CATEGORIAS_VALIDAS = ["Socialização", "Linguagem", "Cognição", "Auto cuidado", "Desenvolvimento Motor"]
 
 def calcular_status_aluno(df, categoria, meses_faixa_etaria, pontuacao_esperada_manual=None):
     categorias = CATEGORIAS_VALIDAS if categoria == "Todas" else [categoria]
