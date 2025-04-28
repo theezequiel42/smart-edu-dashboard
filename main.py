@@ -62,7 +62,7 @@ def exibir_tela_inicial():
     with col1:
         st.markdown('<div class="modo-item">', unsafe_allow_html=True)
         st.image("images/logo_sme.png")
-        if st.button("📊 Modo SME"):
+        if st.button("📊 Modo SME - Avaliação de Cursos"):
             st.session_state["modo"] = "SME"
             st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
@@ -70,7 +70,7 @@ def exibir_tela_inicial():
     with col2:
         st.markdown('<div class="modo-item">', unsafe_allow_html=True)
         st.image("images/logo_cmae.png")
-        if st.button("🎯 Modo CMAE"):
+        if st.button("🎯 Modo CMAE - Avaliação Portage"):
             st.session_state["modo"] = "CMAE"
             st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
@@ -78,7 +78,7 @@ def exibir_tela_inicial():
     with col3:
         st.markdown('<div class="modo-item">', unsafe_allow_html=True)
         st.image("images/logo_converter.png")
-        if st.button("📄 Conversor"):
+        if st.button("📄 Conversor - Arquivos PDF"):
             st.session_state["modo"] = "CONVERSOR"
             st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
@@ -87,7 +87,7 @@ def exibir_tela_inicial():
     with col4:
         st.markdown('<div class="modo-item">', unsafe_allow_html=True)
         st.image("images/logo_portage.png")
-        if st.button("📝 Formulário Portage"):
+        if st.button("📝 Formulário Portage - Questionário"):
             st.session_state["modo"] = "PORTAGE"
             st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
@@ -95,7 +95,7 @@ def exibir_tela_inicial():
     with col5:
         st.markdown('<div class="modo-item">', unsafe_allow_html=True)
         st.image("images/logo_motor.png")
-        if st.button("🧠 Desenvolvimento Motor"):
+        if st.button("🧠 Desenvolvimento Motor - Em Desenvolvimento"):
             st.session_state["modo"] = "MOTOR"
             st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
@@ -103,8 +103,8 @@ def exibir_tela_inicial():
     with col6:
         st.markdown('<div class="modo-item">', unsafe_allow_html=True)
         st.image("images/logo_ia.png")
-        if st.button("🤖 Modo IA"):
-            st.session_state["modo"] = "IA"
+        if st.button("🤖 Modo IA - Em Breve"):
+            st.session_state["modo"] = "IA - Em Desenvolvimento"
             st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
 
