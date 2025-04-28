@@ -1,3 +1,4 @@
+import matplotlib.pyplot as plt
 
 CATEGORIAS_VALIDAS = ["Socialização", "Linguagem", "Cognição", "Auto cuidado", "Desenvolvimento Motor"]
 
