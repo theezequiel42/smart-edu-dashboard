@@ -2,10 +2,11 @@ import streamlit as st
 
 from sme_mode import run_sme_mode
 from cmae_mode import run_cmae_mode
-from converter_mode import run_converter_mode  # Novo modo
-from formulario_portage import run_formulario_portage  # Novo modo
-from desenvolvimento_motor_mode import run_desenvolvimento_motor_mode  # Novo modo
-from ia_mode import run_ia_mode  # Novo modo
+from converter_mode import run_converter_mode
+from formulario_portage import run_formulario_portage
+from desenvolvimento_motor_mode import run_desenvolvimento_motor_mode
+from ia_mode import run_ia_mode
+from ah_mode import run_ah_mode  # ✅ Novo modo AH/SD
 
 def exibir_tela_inicial():
     # Estilo visual
@@ -104,7 +105,17 @@ def exibir_tela_inicial():
         st.markdown('<div class="modo-item">', unsafe_allow_html=True)
         st.image("images/logo_ia.png")
         if st.button("🤖 Modo IA - Em Breve"):
-            st.session_state["modo"] = "IA - Em Desenvolvimento"
+            st.session_state["modo"] = "IA"
+            st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    # Nova linha para o modo AH/SD
+    col7, _, _ = st.columns(3)
+    with col7:
+        st.markdown('<div class="modo-item">', unsafe_allow_html=True)
+        st.image("images/logo_ahsd.png")  # 📌 Adicione esta imagem na pasta images
+        if st.button("🧠 Modo AH/SD – Triagem de Altas Habilidades"):
+            st.session_state["modo"] = "AH"
             st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
 
@@ -123,5 +134,7 @@ def exibir_tela_inicial():
             run_desenvolvimento_motor_mode()
         elif st.session_state["modo"] == "IA":
             run_ia_mode()
+        elif st.session_state["modo"] == "AH":
+            run_ah_mode()  # ✅ Executa o modo de análise AH/SD
 
 exibir_tela_inicial()
