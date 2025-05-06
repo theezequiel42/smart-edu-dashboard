@@ -14,7 +14,8 @@ def run_converter_mode():
         "Dividir PDF",
         "Imagens para PDF",
         "PDF para Imagens",
-        "PDF para Word"
+        "PDF para Word",
+        "Mesclar PDF"
     ])
 
     if opcao == "Dividir PDF":
@@ -122,3 +123,34 @@ def run_converter_mode():
 
                 except Exception as e:
                     st.error(f"❌ Erro ao converter PDF para Word: {e}")
+                    
+    elif opcao == "Mesclar PDF":
+        st.header("📚 Mesclar Vários PDFs em um Único Arquivo")
+        arquivos_pdf = st.file_uploader("Selecione dois ou mais arquivos PDF:", type=["pdf"], accept_multiple_files=True)
+        if arquivos_pdf and len(arquivos_pdf) >= 2:
+            if st.button("Mesclar PDFs"):
+                with st.spinner("🔄 Mesclando arquivos PDF..."):
+                    try:
+                        writer = PdfWriter()
+
+                        for arquivo in arquivos_pdf:
+                            reader = PdfReader(arquivo)
+                            for pagina in reader.pages:
+                                writer.add_page(pagina)
+
+                        output_path = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
+                        with open(output_path.name, "wb") as f:
+                            writer.write(f)
+
+                        st.success("✅ PDFs mesclados com sucesso!")
+                        st.download_button(
+                            "📥 Baixar PDF Mesclado",
+                            data=open(output_path.name, "rb"),
+                            file_name="PDF_Mesclado.pdf",
+                            mime="application/pdf"
+                        )
+                    except Exception as e:
+                        st.error(f"❌ Erro ao mesclar PDFs: {e}")
+        else:
+            st.info("📌 Selecione pelo menos dois arquivos PDF para mesclar.")
+
