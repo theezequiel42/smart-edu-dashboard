@@ -1,16 +1,13 @@
 streamlit
 pandas
+numpy
 matplotlib
 seaborn
-python-docx
+Pillow
 openpyxl
-reportlab
-
-# Manipulação de arquivos Office e PDF
 python-docx
-openpyxl
-reportlab
 pdf2docx
 PyPDF2
-Pillow
 PyMuPDF
+reportlab
+ezdxf
