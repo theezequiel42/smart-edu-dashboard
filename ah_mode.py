@@ -4,10 +4,17 @@ import matplotlib.pyplot as plt
 import numpy as np
 import io
 import sqlite3
-from datetime import datetime
+import os
+import tempfile
 import unicodedata
-from blocos_ahsd import blocos
 from utils import analisar_todos_os_alunos
+from relatorios import gerar_relatorio_pdf, gerar_relatorio_completo_unificado
+from datetime import datetime
+from blocos_ahsd import blocos
+from reportlab.lib.pagesizes import A4
+from reportlab.pdfgen import canvas
+from reportlab.lib.units import cm
+from reportlab.lib.utils import simpleSplit
 
 def normalizar_texto(texto):
     return unicodedata.normalize("NFKD", texto.strip()).encode("ASCII", "ignore").decode("utf-8")
@@ -295,6 +302,11 @@ def analisar_respostas_aluno():
             file_name=nome_arquivo,
             mime="image/png"
         )
+        relatorio_pdf = gerar_relatorio_pdf(aluno_sel, medias_blocos, media_geral, buf)
+        relatorio_completo = gerar_relatorio_completo_unificado(aluno_sel, perfil_sel, df, medias_blocos, media_geral, buf)
+
+        st.download_button("📄 Baixar relatório geral (PDF)", relatorio_pdf, f"relatorio_geral_{nome_limpo}.pdf", "application/pdf")
+        st.download_button("📋 Baixar relatório completo (PDF)", relatorio_completo, f"relatorio_completo_{nome_limpo}.pdf", "application/pdf")
 
 def run_ah_mode():
     st.title("📤 Importação de Respostas - Altas Habilidades/Superdotação")
