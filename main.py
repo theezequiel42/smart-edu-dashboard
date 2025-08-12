@@ -6,9 +6,12 @@ from converter_mode import run_converter_mode
 from formulario_portage import run_formulario_portage
 from desenvolvimento_motor_mode import run_desenvolvimento_motor_mode
 from ia_mode import run_ia_mode
-from ah_mode import run_ah_mode  # ✅ Novo modo AH/SD
+from ah_mode import run_ah_mode  # ✅ Modo AH/SD
 
 def exibir_tela_inicial():
+    # Configuração de página (evita mudar em cada modo)
+    st.set_page_config(page_title="Smart Edu Dashboard", layout="wide")
+
     # Estilo visual
     st.markdown(
         """
@@ -58,12 +61,16 @@ def exibir_tela_inicial():
     st.title("Smart Edu Dashboard")
     st.markdown("## Selecione o Modo de Visualização:")
 
+    # Garantir chave na sessão
+    if "modo" not in st.session_state:
+        st.session_state["modo"] = None
+
     # Layout com logos + botões agrupados
     col1, col2, col3 = st.columns(3)
     with col1:
         st.markdown('<div class="modo-item">', unsafe_allow_html=True)
         st.image("images/logo_sme.png")
-        if st.button("📊 Modo SME - Avaliação de Cursos"):
+        if st.button("📊 Modo SME - Avaliação de Cursos", key="btn_sme"):
             st.session_state["modo"] = "SME"
             st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
@@ -71,7 +78,7 @@ def exibir_tela_inicial():
     with col2:
         st.markdown('<div class="modo-item">', unsafe_allow_html=True)
         st.image("images/logo_cmae.png")
-        if st.button("🎯 Modo CMAE - Avaliação Portage"):
+        if st.button("🎯 Modo CMAE - Avaliação Portage", key="btn_cmae"):
             st.session_state["modo"] = "CMAE"
             st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
@@ -79,7 +86,7 @@ def exibir_tela_inicial():
     with col3:
         st.markdown('<div class="modo-item">', unsafe_allow_html=True)
         st.image("images/logo_converter.png")
-        if st.button("📄 Conversor - Arquivos PDF"):
+        if st.button("📄 Conversor - Arquivos PDF", key="btn_conv"):
             st.session_state["modo"] = "CONVERSOR"
             st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
@@ -88,7 +95,7 @@ def exibir_tela_inicial():
     with col4:
         st.markdown('<div class="modo-item">', unsafe_allow_html=True)
         st.image("images/logo_portage.png")
-        if st.button("📝 Formulário Portage - Questionário"):
+        if st.button("📝 Formulário Portage - Questionário", key="btn_portage"):
             st.session_state["modo"] = "PORTAGE"
             st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
@@ -96,7 +103,8 @@ def exibir_tela_inicial():
     with col5:
         st.markdown('<div class="modo-item">', unsafe_allow_html=True)
         st.image("images/logo_motor.png")
-        if st.button("🧠 Desenvolvimento Motor - Em Desenvolvimento"):
+        # ✅ Atualizado: EDM disponível
+        if st.button("🧠 Desenvolvimento Motor – EDM", key="btn_dm"):
             st.session_state["modo"] = "MOTOR"
             st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
@@ -104,7 +112,7 @@ def exibir_tela_inicial():
     with col6:
         st.markdown('<div class="modo-item">', unsafe_allow_html=True)
         st.image("images/logo_ia.png")
-        if st.button("🤖 Modo IA - Em Breve"):
+        if st.button("🤖 Modo IA - Em Breve", key="btn_ia"):
             st.session_state["modo"] = "IA"
             st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
@@ -113,28 +121,30 @@ def exibir_tela_inicial():
     col7, _, _ = st.columns(3)
     with col7:
         st.markdown('<div class="modo-item">', unsafe_allow_html=True)
-        st.image("images/logo_ahsd.png")  # 📌 Adicione esta imagem na pasta images
-        if st.button("🧠 Modo AH/SD – Triagem de Altas Habilidades"):
+        st.image("images/logo_ahsd.png")  # 📌 Certifique-se de ter esta imagem
+        if st.button("🧠 Modo AH/SD – Triagem de Altas Habilidades", key="btn_ah"):
             st.session_state["modo"] = "AH"
             st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
 
     # Executa o modo escolhido
-    if "modo" in st.session_state:
+    if st.session_state["modo"]:
         st.empty()  # limpa a tela inicial
-        if st.session_state["modo"] == "SME":
+        modo = st.session_state["modo"]
+        if modo == "SME":
             run_sme_mode()
-        elif st.session_state["modo"] == "CMAE":
+        elif modo == "CMAE":
             run_cmae_mode()
-        elif st.session_state["modo"] == "CONVERSOR":
+        elif modo == "CONVERSOR":
             run_converter_mode()
-        elif st.session_state["modo"] == "PORTAGE":
+        elif modo == "PORTAGE":
             run_formulario_portage()
-        elif st.session_state["modo"] == "MOTOR":
+        elif modo == "MOTOR":
             run_desenvolvimento_motor_mode()
-        elif st.session_state["modo"] == "IA":
+        elif modo == "IA":
             run_ia_mode()
-        elif st.session_state["modo"] == "AH":
-            run_ah_mode()  # ✅ Executa o modo de análise AH/SD
+        elif modo == "AH":
+            run_ah_mode()
 
-exibir_tela_inicial()
+if __name__ == "__main__":
+    exibir_tela_inicial()
