@@ -10,111 +10,11 @@ import numpy as np
 import sqlite3
 import unicodedata
 
+# =========================
+# Constantes globais
+# =========================
+
 CATEGORIAS_VALIDAS = ["Socialização", "Linguagem", "Cognição", "Auto cuidado", "Desenvolvimento Motor"]
-
-def gerar_grafico_respostas(df, categoria_selecionada="Todas", largura=6, altura=4):
-    fig, ax = plt.subplots(figsize=(largura, altura))
-
-    categorias = CATEGORIAS_VALIDAS if categoria_selecionada == "Todas" else [categoria_selecionada]
-    contagem_respostas = {"Sim": 0, "Às vezes": 0, "Não": 0}
-
-    for categoria in categorias:
-        colunas_categoria = [col for col in df.columns if col.startswith(categoria)]
-        for col in colunas_categoria:
-            respostas = df[col].dropna().astype(str).str.strip()
-            contagem_respostas["Sim"] += (respostas == "Sim").sum()
-            contagem_respostas["Às vezes"] += (respostas == "Às vezes").sum()
-            contagem_respostas["Não"] += (respostas == "Não").sum()
-
-    cores = ["#2E7D32", "#FFC107", "#D32F2F"]
-    ax.bar(contagem_respostas.keys(), contagem_respostas.values(), color=cores)
-    ax.set_title(f"Contagem de Respostas - {categoria_selecionada}")
-    ax.set_ylabel("Quantidade")
-    return fig, ax
-
-
-def quebrar_rotulo(texto, limite=15):
-    """ Quebra rótulos longos sem dividir palavras no meio. """
-    palavras = texto.split()
-    resultado = []
-    linha_atual = ""
-    
-    for palavra in palavras:
-        if len(linha_atual) + len(palavra) + 1 <= limite:
-            linha_atual += " " + palavra if linha_atual else palavra
-        else:
-            resultado.append(linha_atual)
-            linha_atual = palavra
-    resultado.append(linha_atual)
-    
-    return "\n".join(resultado)
-
-def analisar_todos_os_alunos():
-    st.subheader("📊 Análise Geral de Todos os Alunos")
-    conn = sqlite3.connect("respostas_ahsd.db")
-    c = conn.cursor()
-
-    c.execute("SELECT aluno, bloco, resposta FROM respostas")
-    dados = c.fetchall()
-    conn.close()
-
-    if not dados:
-        st.info("Ainda não há respostas registradas.")
-        return
-
-    df = pd.DataFrame(dados, columns=["Aluno", "Bloco", "Resposta"])
-    
-    # Remove o bloco "Descritivo" da análise
-    df = df[df["Bloco"] != "Descritivo"]
-
-
-    mapa_respostas = {"Nunca": 0, "Raramente": 1, "Às vezes": 2, "As vezes": 2, "Frequentemente": 3, "Sempre": 4}
-    mapa_diagnostico = {"Sim": 4, "Não": 0, "Altas": 4, "Alta": 4, "Média": 2, "Medias": 2, "Médias": 2, "Baixa": 0, "Baixas": 0}
-
-    df["RespostaNum"] = df["Resposta"].apply(lambda x: unicodedata.normalize("NFKD", str(x).strip()).encode("ASCII", "ignore").decode("utf-8"))
-    df["RespostaNum"] = df["RespostaNum"].map(mapa_respostas).fillna(df["RespostaNum"].map(mapa_diagnostico))
-    df["RespostaNum"] = pd.to_numeric(df["RespostaNum"], errors="coerce")
-
-    # Média por bloco (geral)
-    st.subheader("📚 Média Geral por Bloco")
-    media_blocos = df.groupby("Bloco")["RespostaNum"].mean().round(2)
-    st.bar_chart(media_blocos)
-
-    # Média geral por aluno
-    st.subheader("🏅 Ranking de Alunos por Média Geral")
-    ranking = df.groupby("Aluno")["RespostaNum"].mean().sort_values(ascending=False).round(2)
-    st.dataframe(ranking.reset_index().rename(columns={"RespostaNum": "Média Geral"}), use_container_width=True)
-
-    # Radar da média por bloco (todos os alunos)
-    st.subheader("📈 Radar da Média Geral por Bloco")
-    if len(media_blocos) > 1:
-        labels = list(media_blocos.index)
-        valores = list(media_blocos.values)
-        labels_plot = labels + [labels[0]]
-        valores_plot = valores + [valores[0]]
-        angles = np.linspace(0, 2 * np.pi, len(labels), endpoint=False).tolist()
-        angles += angles[:1]
-
-        escala = st.slider("📐 Escala visual do gráfico", 3, 8, 5)
-        col1, col2, col3 = st.columns([1, 6, 1])
-        with col2:
-            fig, ax = plt.subplots(figsize=(escala, escala * 0.8), subplot_kw=dict(polar=True))
-            ax.plot(angles, valores_plot, linewidth=2, linestyle='solid', marker='o')
-            ax.fill(angles, valores_plot, alpha=0.25)
-            ax.set_yticks([0, 1, 2, 3, 4])
-            ax.set_yticklabels(['0', '1', '2', '3', '4'], fontsize=8)
-            ax.set_ylim(0, 4)
-            ax.set_xticks(angles)
-            ax.set_xticklabels(labels_plot, fontsize=9)
-            ax.set_title('Radar – Média Geral por Bloco', size=13, pad=10)
-            st.pyplot(fig)
-    else:
-        st.info("Não há dados suficientes para exibir o gráfico radar.")
-        
-        
-# =========================
-# Config / Constantes
-# =========================
 
 EDM_DOMINIOS = [
     "fina",        # Motricidade Fina
@@ -163,8 +63,142 @@ EXPECTED_COLS = [
     "Comentários ou observações (opcional)",                               # OPCIONAL
 ]
 
+
 # =========================
-# Funções de utilidade
+# Gráficos simples
+# =========================
+
+def gerar_grafico_respostas(df: pd.DataFrame, categoria_selecionada: str = "Todas", largura: int = 6, altura: int = 4):
+    """
+    Gera um gráfico de barras com a contagem de respostas "Sim / Às vezes / Não"
+    para as colunas que começam com o prefixo das categorias.
+    """
+    fig, ax = plt.subplots(figsize=(largura, altura))
+
+    categorias = CATEGORIAS_VALIDAS if categoria_selecionada == "Todas" else [categoria_selecionada]
+    contagem_respostas = {"Sim": 0, "Às vezes": 0, "Não": 0}
+
+    for categoria in categorias:
+        colunas_categoria = [col for col in df.columns if str(col).startswith(categoria)]
+        for col in colunas_categoria:
+            respostas = df[col].dropna().astype(str).str.strip()
+            contagem_respostas["Sim"] += (respostas == "Sim").sum()
+            contagem_respostas["Às vezes"] += (respostas == "Às vezes").sum()
+            contagem_respostas["Não"] += (respostas == "Não").sum()
+
+    cores = ["#2E7D32", "#FFC107", "#D32F2F"]
+    ax.bar(list(contagem_respostas.keys()), list(contagem_respostas.values()), color=cores)
+    ax.set_title(f"Contagem de Respostas - {categoria_selecionada}")
+    ax.set_ylabel("Quantidade")
+    return fig, ax
+
+
+def quebrar_rotulo(texto, limite: int = 15) -> str:
+    """
+    Quebra rótulos longos sem dividir palavras no meio.
+    Aceita tipos não-string (int/float/None) convertendo em string com segurança.
+    Para palavras muito longas (sem espaços) corta em blocos do tamanho 'limite'.
+    """
+    if texto is None:
+        return ""
+    s = str(texto).strip()
+    if not s:
+        return ""
+
+    # Palavras sem espaços e muito longas: quebra forçada a cada 'limite' caracteres
+    if " " not in s and len(s) > limite:
+        return "\n".join([s[i:i+limite] for i in range(0, len(s), limite)])
+
+    palavras = s.split()
+    resultado, linha_atual = [], ""
+
+    for palavra in palavras:
+        if len(linha_atual) + len(palavra) + (1 if linha_atual else 0) <= limite:
+            linha_atual = (linha_atual + " " + palavra).strip() if linha_atual else palavra
+        else:
+            if linha_atual:
+                resultado.append(linha_atual)
+            # Se a palavra isolada for maior que o limite, quebra forçada:
+            if len(palavra) > limite:
+                partes = [palavra[i:i+limite] for i in range(0, len(palavra), limite)]
+                resultado.extend(partes[:-1])
+                linha_atual = partes[-1]
+            else:
+                linha_atual = palavra
+    if linha_atual:
+        resultado.append(linha_atual)
+
+    return "\n".join(resultado)
+
+
+# =========================
+# Análise geral (AH/SD)
+# =========================
+
+def analisar_todos_os_alunos():
+    st.subheader("📊 Análise Geral de Todos os Alunos")
+    conn = sqlite3.connect("respostas_ahsd.db")
+    c = conn.cursor()
+    c.execute("SELECT aluno, bloco, resposta FROM respostas")
+    dados = c.fetchall()
+    conn.close()
+
+    if not dados:
+        st.info("Ainda não há respostas registradas.")
+        return
+
+    df = pd.DataFrame(dados, columns=["Aluno", "Bloco", "Resposta"])
+
+    # Remove o bloco "Descritivo" da análise
+    df = df[df["Bloco"] != "Descritivo"]
+
+    mapa_respostas = {"Nunca": 0, "Raramente": 1, "Às vezes": 2, "As vezes": 2, "Frequentemente": 3, "Sempre": 4}
+    mapa_diagnostico = {"Sim": 4, "Não": 0, "Altas": 4, "Alta": 4, "Média": 2, "Medias": 2, "Médias": 2, "Baixa": 0, "Baixas": 0}
+
+    df["RespostaNum"] = df["Resposta"].apply(lambda x: unicodedata.normalize("NFKD", str(x).strip()).encode("ASCII", "ignore").decode("utf-8"))
+    df["RespostaNum"] = df["RespostaNum"].map(mapa_respostas).fillna(df["RespostaNum"].map(mapa_diagnostico))
+    df["RespostaNum"] = pd.to_numeric(df["RespostaNum"], errors="coerce")
+
+    # Média por bloco (geral)
+    st.subheader("📚 Média Geral por Bloco")
+    media_blocos = df.groupby("Bloco", dropna=False)["RespostaNum"].mean().round(2)
+    st.bar_chart(media_blocos)
+
+    # Média geral por aluno
+    st.subheader("🏅 Ranking de Alunos por Média Geral")
+    ranking = df.groupby("Aluno", dropna=False)["RespostaNum"].mean().sort_values(ascending=False).round(2)
+    st.dataframe(ranking.reset_index().rename(columns={"RespostaNum": "Média Geral"}), use_container_width=True)
+
+    # Radar da média por bloco (todos os alunos)
+    st.subheader("📈 Radar da Média Geral por Bloco")
+    if len(media_blocos) > 1:
+        labels = list(media_blocos.index)
+        valores = list(media_blocos.values)
+        labels_plot = labels + [labels[0]]
+        valores_plot = valores + [valores[0]]
+        angles = np.linspace(0, 2 * np.pi, len(labels), endpoint=False).tolist()
+        angles += angles[:1]
+
+        escala = st.slider("📐 Escala visual do gráfico", 3, 8, 5)
+        col1, col2, col3 = st.columns([1, 6, 1])
+        with col2:
+            fig, ax = plt.subplots(figsize=(escala, escala * 0.8), subplot_kw=dict(polar=True))
+            ax.plot(angles, valores_plot, linewidth=2, linestyle='solid', marker='o')
+            ax.fill(angles, valores_plot, alpha=0.25)
+            ax.set_yticks([0, 1, 2, 3, 4])
+            ax.set_yticklabels(['0', '1', '2', '3', '4'], fontsize=8)
+            ax.set_ylim(0, 4)
+            ax.set_xticks(angles)
+            ax.set_xticklabels(labels_plot, fontsize=9)
+            ax.set_title('Radar – Média Geral por Bloco', size=13, pad=10)
+            st.pyplot(fig)
+            plt.close(fig)
+    else:
+        st.info("Não há dados suficientes para exibir o gráfico radar.")
+
+
+# =========================
+# Utilidades de data / idade
 # =========================
 
 def _parse_date(val):
@@ -270,6 +304,10 @@ def _signed_meses_para_anos_meses_str(meses_signed):
     return f"{sign}{anos}.{mm}"
 
 
+# =========================
+# QDM / Alertas
+# =========================
+
 def _classificacao_qdm(qdm: float):
     if pd.isna(qdm):
         return "—"
@@ -296,7 +334,7 @@ def _alerta_qdm(qdm: float, idade_mot_meses: float):
     return "⚠️ Atraso" if qdm < 85 else "OK"
 
 
-def _alerta_dominios(row):
+def _alerta_dominios(row: pd.Series):
     criticos = []
     for d in EDM_DOMINIOS:
         val = row.get(d, np.nan)
@@ -313,7 +351,7 @@ def _is_optional_header(column_name: str) -> bool:
 
 
 # =========================
-# Pré-processamento principal
+# Pré-processamento principal (EDM)
 # =========================
 
 def preprocess_edm(df_raw: pd.DataFrame, colmap: dict) -> pd.DataFrame:
@@ -324,7 +362,7 @@ def preprocess_edm(df_raw: pd.DataFrame, colmap: dict) -> pd.DataFrame:
     - Calcula IDADE MOTORA GERAL (média dos DOMÍNIOS em anos ⇒ meses) + string anos.meses
       (fallback para 'idade_motora_str' se os domínios estiverem vazios na linha)
     - QDM com base na idade motora FINAL (geral ou informada)
-    - IN/IP = idade motora geral - idade cronológica (meses), com string em anos.meses com sinal
+    - IN/IP = idade motora final - idade cronológica (meses), com string em anos.meses com sinal
     - Classificação e alertas
     """
     df = df_raw.copy()
@@ -386,7 +424,7 @@ def preprocess_edm(df_raw: pd.DataFrame, colmap: dict) -> pd.DataFrame:
         np.nan
     )
 
-    # 8) IN/IP = motora (geral) - cronológica
+    # 8) IN/IP = motora final - cronológica
     df["in_ip_meses"] = df["idade_mot_meses_final"] - df["idade_cron_meses"]
     df.loc[df["idade_mot_meses_final"].isna() | df["idade_cron_meses"].isna(), "in_ip_meses"] = np.nan
     df["in_ip_anos_meses_str"] = df["in_ip_meses"].apply(_signed_meses_para_anos_meses_str)
@@ -415,9 +453,19 @@ def preprocess_edm(df_raw: pd.DataFrame, colmap: dict) -> pd.DataFrame:
 # Radar (matplotlib)
 # =========================
 
-def radar_edm_matplotlib(row):
+def radar_edm_matplotlib(row: pd.Series):
+    """
+    Plota um radar dos domínios do EDM para uma linha (row).
+    """
     labels = ["Fina", "Global", "Equilíbrio", "Esquema", "Espacial", "Temporal"]
-    values = [float(row.get(d, np.nan)) if pd.notna(row.get(d, np.nan)) else 0.0 for d in EDM_DOMINIOS]
+    values = []
+    for d in EDM_DOMINIOS:
+        v = row.get(d, np.nan)
+        try:
+            values.append(float(v) if pd.notna(v) else 0.0)
+        except Exception:
+            values.append(0.0)
+
     values += values[:1]
     angles = np.linspace(0, 2 * math.pi, len(labels), endpoint=False).tolist()
     angles += angles[:1]
@@ -428,7 +476,7 @@ def radar_edm_matplotlib(row):
     ax.set_xticks(angles[:-1])
     ax.set_xticklabels(labels)
 
-    rmax = max([v for v in values if pd.notna(v)] + [3.0])
+    rmax = max([v for v in values if not pd.isna(v)] + [3.0])
     rmax = max(rmax, 3.0)
     ax.set_rlabel_position(0)
     ax.set_ylim(0, rmax)
@@ -446,6 +494,10 @@ def radar_edm_matplotlib(row):
 
 @st.cache_data(ttl=300)
 def _load_csv(csv_url: str = None, uploaded_file=None) -> pd.DataFrame:
+    """
+    Lê CSV de URL ou arquivo carregado, tentando detectar separador, limpando colunas extras
+    e sinalizando colunas esperadas ausentes.
+    """
     raw: bytes | None = None
     if uploaded_file is not None:
         raw = uploaded_file.read()
@@ -455,16 +507,18 @@ def _load_csv(csv_url: str = None, uploaded_file=None) -> pd.DataFrame:
             resp.raise_for_status()
             raw = resp.content
         except Exception as e:
+            # Tenta ler diretamente pelo pandas (caso a URL permita)
             try:
                 df = pd.read_csv(csv_url, encoding="utf-8-sig", engine="python", sep=None, on_bad_lines="skip")
                 df.columns = [str(c).strip() for c in df.columns]
                 return _fix_excess_columns(df)
             except Exception as e2:
-                st.error(f"Falha ao baixar/ler a URL CSV.\\n1) {e}\\n2) {e2}")
+                st.error(f"Falha ao baixar/ler a URL CSV.\n1) {e}\n2) {e2}")
                 return pd.DataFrame()
     else:
         return pd.DataFrame()
 
+    # Tentativas de parsing
     try:
         df = pd.read_csv(io.BytesIO(raw), encoding="utf-8-sig", engine="python", sep=None, on_bad_lines="skip")
     except Exception:
@@ -489,8 +543,13 @@ def _load_csv(csv_url: str = None, uploaded_file=None) -> pd.DataFrame:
 
 
 def _fix_excess_columns(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Se houver mais colunas que o esperado, concatena o 'rastro' em
+    'Comentários ou observações (opcional)' para não perder informação.
+    """
     if EXPECTED_COLS[-1] not in df.columns:
         df[EXPECTED_COLS[-1]] = ""
+
     if len(df.columns) > len(EXPECTED_COLS):
         start_idx = len(EXPECTED_COLS) - 1
         extras = df.columns[start_idx:]
@@ -505,15 +564,19 @@ def _fix_excess_columns(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+# =========================
+# Filtros / Agregações
+# =========================
+
 def _apply_filters(df: pd.DataFrame, escola, turma, sexo_opts, only_alert):
     dff = df.copy()
-    if escola and escola != "Todas":
+    if escola and escola != "Todas" and "escola" in dff.columns:
         dff = dff[dff["escola"] == escola]
-    if turma and turma != "Todas":
+    if turma and turma != "Todas" and "turma" in dff.columns:
         dff = dff[dff["turma"] == turma]
-    if sexo_opts:
+    if sexo_opts and "sexo" in dff.columns:
         dff = dff[dff["sexo"].isin(sexo_opts)]
-    if only_alert:
+    if only_alert and "alerta_qdm" in dff.columns:
         dff = dff[dff["alerta_qdm"].isin(["⚠️ Atraso", "ℹ️ Sem idade motora"])]
     return dff
 
@@ -523,10 +586,14 @@ def _agg_by_turma(df: pd.DataFrame) -> pd.DataFrame:
         return pd.DataFrame(columns=[
             "escola", "turma", "total", "qdm_med", "in_ip_med", *[f"avg_{d}" for d in EDM_DOMINIOS]
         ])
-    agg = df.groupby(["escola", "turma"], dropna=False).agg(
-        total=("nome", "count"),
-        qdm_med=("QDM", "mean"),
-        in_ip_med=("in_ip_meses", "mean"),
-        **{f"avg_{d}": (d, "mean") for d in EDM_DOMINIOS}
+    # Garante colunas presentes para evitar KeyError
+    cols_present = [c for c in ["escola", "turma", "nome", "QDM", "in_ip_meses", *EDM_DOMINIOS] if c in df.columns]
+    dfr = df[cols_present].copy()
+
+    agg = dfr.groupby([x for x in ["escola", "turma"] if x in dfr.columns], dropna=False).agg(
+        total=("nome", "count") if "nome" in dfr.columns else ("QDM", "count"),
+        qdm_med=("QDM", "mean") if "QDM" in dfr.columns else ("QDM", "size"),
+        in_ip_med=("in_ip_meses", "mean") if "in_ip_meses" in dfr.columns else ("QDM", "size"),
+        **{f"avg_{d}": (d, "mean") for d in EDM_DOMINIOS if d in dfr.columns}
     ).reset_index()
     return agg
